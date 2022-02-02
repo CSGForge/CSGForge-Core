@@ -1,5 +1,7 @@
 #include "AABB.hpp"
 
+#include <iostream>
+
 namespace ForgeCore
 {
     bool AABB::Intersects(AABB other)
@@ -25,5 +27,16 @@ namespace ForgeCore
             mMax.y = std::max(v.y, mMax.y);
             mMax.z = std::max(v.z, mMax.z);
         }
+    }
+
+    void AABB::Spew() {
+        std::cout << "Min:" << std::endl;
+        std::cout << "  x: " << mMin.x << std::endl;
+        std::cout << "  y: " << mMin.y << std::endl;
+        std::cout << "  z: " << mMin.z << std::endl;
+        std::cout << "Max:" << std::endl;
+        std::cout << "  x: " << mMax.x << std::endl;
+        std::cout << "  y: " << mMax.y << std::endl;
+        std::cout << "  z: " << mMax.z << std::endl;
     }
 }
