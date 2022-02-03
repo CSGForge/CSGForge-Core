@@ -28,7 +28,8 @@ namespace ForgeCore
 
             // Add to the updated brush list
             updated_brushes.insert(b);
-            // TODO: Add intersections to updated brushes (if they're not already in there)
+            for (auto i : intersections)
+                updated_brushes.insert(i);
         }
         return updated_brushes;
     }
