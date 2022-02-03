@@ -21,10 +21,14 @@ namespace ForgeCore
         {
             if (!b->IsDirty())
                 continue;
-            // TODO: Brush needs to be set to clean at some point
 
             b->RebuildFaces();
+            auto intersections = b->RebuildIntersections(mBrushes);
+            b->SetClean();
+
+            // Add to the updated brush list
             updated_brushes.insert(b);
+            // TODO: Add intersections to updated brushes (if they're not already in there)
         }
         return updated_brushes;
     }

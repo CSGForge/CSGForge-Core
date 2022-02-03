@@ -1,6 +1,7 @@
 #include "Brush.hpp"
 
 #include <set>
+#include <iostream>
 
 #include <glm/gtc/matrix_access.hpp>
 
@@ -17,6 +18,11 @@ namespace ForgeCore
     bool Brush::IsDirty()
     {
         return mDirty;
+    }
+
+    void Brush::SetClean()
+    {
+        mDirty = false;
     }
 
     void Brush::RebuildFaces()
@@ -84,6 +90,7 @@ namespace ForgeCore
 
         // Update AABB
         mBoundingBox.Update(brush_vertices);
+        mVertices = brush_vertices;
     }
 
     bool Brush::PointInPlanes(glm::vec3 point)
@@ -93,6 +100,67 @@ namespace ForgeCore
             if ((glm::dot(p.mNormal, point) + p.mOffset) > 0.0001)
                 return false;
         return true;
+    }
+
+    std::vector<Brush *> Brush::RebuildIntersections(std::vector<Brush *> brushes)
+    {
+        // Clear out current intersections both ways
+        for (auto b : mIntersections)
+            b->RemoveIntersection(this);
+        mIntersections.clear();
+
+        // Recalculate intersections
+        for (auto b : brushes)
+        {
+            // Can't intersect with ourself or if AABBs don't intersect
+            if (b == this || !mBoundingBox.Intersects(b->GetAABB()))
+                continue;
+
+            // If any vertices are in the other brushes planes (or vice versa) we have an intersection
+            std::vector<Brush *> bs{this, b};
+            bool intersects = false;
+            for (int i = 0; i < 2; i++)
+            {
+                if (intersects)
+                    continue;
+                for (auto v : bs[i]->GetVertices())
+                {
+                    if (bs[(i + 1) % 2]->PointInPlanes(v))
+                    {
+                        intersects = true;
+                        break;
+                    }
+                }
+            }
+
+            // Add an intersection both ways if ones found
+            if (intersects)
+            {
+                AddIntersection(b);
+                b->AddIntersection(this);
+            }
+        }
+
+        return mIntersections;
+    }
+
+    void Brush::AddIntersection(Brush *brush)
+    {
+        // TODO: Check that the brush isn't already in the intersections list
+        mIntersections.push_back(brush);
+    }
+
+    void Brush::RemoveIntersection(Brush *brush)
+    {
+        // Early return assumes brushes are listed once (i.e. mIntersections is a set)
+        for (int i = 0; i < mIntersections.size(); i++)
+        {
+            if (mIntersections[i] == brush)
+            {
+                mIntersections.erase(mIntersections.begin() + i);
+                return;
+            }
+        }
     }
 
     AABB Brush::GetAABB()
@@ -114,5 +182,15 @@ namespace ForgeCore
     std::vector<Face> Brush::GetFaces()
     {
         return mFaces;
+    }
+
+    std::vector<glm::vec3> Brush::GetVertices()
+    {
+        return mVertices;
+    }
+
+    std::vector<Brush *> Brush::GetIntersections()
+    {
+        return mIntersections;
     }
 }
