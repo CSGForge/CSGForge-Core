@@ -22,6 +22,7 @@ namespace ForgeCore
         void SetPlanes(std::vector<Plane> planes);
         std::vector<Plane> GetPlanes();
         std::vector<Face> GetFaces();
+        bool PointInPlanes(glm::vec3 point);
 
     private:
         bool mDirty;

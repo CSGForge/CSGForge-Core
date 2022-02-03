@@ -68,16 +68,7 @@ namespace ForgeCore
                         glm::determinant(glm::column(mz, 2, -offsets)) / det_m);
 
                     // Check that the found vertex isn't outside of any of the planes
-                    bool outside = false;
-                    for (auto p : mPlanes)
-                    {
-                        if ((glm::dot(p.mNormal, vertex) + p.mOffset) > 0.001)
-                        {
-                            outside = true;
-                            break;
-                        }
-                    }
-                    if (!outside)
+                    if (PointInPlanes(vertex))
                     {
                         // Add the vertex to the various vertex sets
                         PushBackIfUnique(brush_vertices, vertex, 0.0001);
@@ -93,6 +84,15 @@ namespace ForgeCore
 
         // Update AABB
         mBoundingBox.Update(brush_vertices);
+    }
+
+    bool Brush::PointInPlanes(glm::vec3 point)
+    {
+        // Epsilon used because floating point precision sucks
+        for (auto p : mPlanes)
+            if ((glm::dot(p.mNormal, point) + p.mOffset) > 0.0001)
+                return false;
+        return true;
     }
 
     AABB Brush::GetAABB()
