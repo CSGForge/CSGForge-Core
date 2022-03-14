@@ -146,8 +146,9 @@ namespace ForgeCore
 
     void Brush::AddIntersection(Brush *brush)
     {
-        // TODO: Check that the brush isn't already in the intersections list
-        mIntersections.push_back(brush);
+        // Add the intersection only if it's not already in the intersection list
+        if (mIntersections.size() == 0 || *std::find(mIntersections.begin(), mIntersections.end(), brush) != brush)
+            mIntersections.push_back(brush);
     }
 
     void Brush::RemoveIntersection(Brush *brush)
