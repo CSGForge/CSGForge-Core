@@ -29,14 +29,13 @@ namespace ForgeCore
         }
     }
 
-    void AABB::Spew() {
-        std::cout << "Min:" << std::endl;
-        std::cout << "  x: " << mMin.x << std::endl;
-        std::cout << "  y: " << mMin.y << std::endl;
-        std::cout << "  z: " << mMin.z << std::endl;
-        std::cout << "Max:" << std::endl;
-        std::cout << "  x: " << mMax.x << std::endl;
-        std::cout << "  y: " << mMax.y << std::endl;
-        std::cout << "  z: " << mMax.z << std::endl;
+    glm::vec3 AABB::GetMin()
+    {
+        return mMin;
+    }
+
+    glm::vec3 AABB::GetMax()
+    {
+        return mMax;
     }
 }

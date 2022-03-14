@@ -14,7 +14,8 @@ namespace ForgeCore
 
         bool Intersects(AABB other);
         void Update(std::vector<glm::vec3> vertices);
-        void Spew();
+        glm::vec3 GetMin();
+        glm::vec3 GetMax();
 
     private:
         glm::vec3 mMin;

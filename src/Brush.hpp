@@ -30,6 +30,7 @@ namespace ForgeCore
         bool PointInPlanes(glm::vec3 point);
         void AddIntersection(Brush *brush);
         void RemoveIntersection(Brush *brush);
+        void Triangulate();
 
     private:
         World *mWorld;

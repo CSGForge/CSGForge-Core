@@ -16,11 +16,10 @@ namespace ForgeCore
 
     std::set<Brush *> World::Update()
     {
+        // Full rebuilds occur when a brushes planes have been edited
         for (auto b : mNeedFullRebuild)
         {
             b->RebuildFaces();
-
-            // TODO: Check if this is potentially recalculating multiple times in some cases (two intersecting brushes both have a full update)
             auto intersections = b->RebuildIntersections(mBrushes);
             for (auto i : intersections)
                 mNeedPartialRebuild.insert(i);
@@ -29,6 +28,12 @@ namespace ForgeCore
 
         for (auto b : mNeedPartialRebuild)
         {
+            // Avoid recalculating intersections
+            if (!mNeedFullRebuild.contains(b))
+                b->RebuildIntersections(mBrushes);
+
+            b->Triangulate();
+            // TODO: Actual 2D boolean polygon operations on faces
         }
 
         std::set<Brush *> updated_brushes = mNeedPartialRebuild;

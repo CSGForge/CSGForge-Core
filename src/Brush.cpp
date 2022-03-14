@@ -37,7 +37,8 @@ namespace ForgeCore
         vs.push_back(v1);
     }
 
-    Brush::Brush(World *world) {
+    Brush::Brush(World *world)
+    {
         mWorld = world;
     }
 
@@ -113,6 +114,7 @@ namespace ForgeCore
         for (auto v : brush_vertices)
             vs.push_back(v.mPosition);
         mBoundingBox.Update(vs);
+        // TODO: Verify these are correct
         mVertices = brush_vertices;
 
         // Reorder face vertices
@@ -258,5 +260,11 @@ namespace ForgeCore
     std::vector<Brush *> Brush::GetIntersections()
     {
         return mIntersections;
+    }
+
+    void Brush::Triangulate()
+    {
+        for (int i = 0; i < mFaces.size(); i++)
+            mFaces[i].Triangulate();
     }
 }

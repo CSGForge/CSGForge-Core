@@ -8,7 +8,7 @@
 #include "Vertex.hpp"
 
 namespace ForgeCore
-{    
+{
     class Face
     {
     public:
@@ -19,6 +19,7 @@ namespace ForgeCore
         std::vector<Vertex> GetVertices();
         std::vector<unsigned int> GetIndices();
         Plane GetPlane();
+        void Triangulate();
 
     private:
         Plane *mPlane;
