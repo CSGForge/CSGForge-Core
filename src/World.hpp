@@ -16,8 +16,11 @@ namespace ForgeCore
         Brush *AddBrush();
         std::vector<Brush *> GetBrushes();
         std::set<Brush *> Update();
+        void RebuildBrush(Brush *brush);
 
     private:
         std::vector<Brush *> mBrushes;
+        std::set<Brush *> mNeedFullRebuild;
+        std::set<Brush *> mNeedPartialRebuild;
     };
 }

@@ -5,6 +5,8 @@
 
 #include <glm/gtc/matrix_access.hpp>
 
+#include "World.hpp"
+
 namespace ForgeCore
 {
     // void PushBackIfUnique(std::vector<glm::vec3> &vs, glm::vec3 v1, float eps)
@@ -35,14 +37,8 @@ namespace ForgeCore
         vs.push_back(v1);
     }
 
-    bool Brush::IsDirty()
-    {
-        return mDirty;
-    }
-
-    void Brush::SetClean()
-    {
-        mDirty = false;
+    Brush::Brush(World *world) {
+        mWorld = world;
     }
 
     void Brush::RebuildFaces()
@@ -241,7 +237,7 @@ namespace ForgeCore
     void Brush::SetPlanes(std::vector<Plane> planes)
     {
         mPlanes = planes;
-        mDirty = true;
+        mWorld->RebuildBrush(this);
     }
 
     std::vector<Plane> Brush::GetPlanes()

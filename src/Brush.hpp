@@ -11,14 +11,14 @@
 
 namespace ForgeCore
 {
+    class World;
+
     class Brush
     {
     public:
-        Brush() = default;
+        Brush(World *world);
         ~Brush() = default;
 
-        bool IsDirty();
-        void SetClean();
         void RebuildFaces();
         std::vector<Brush *> RebuildIntersections(std::vector<Brush *> brushes);
         AABB GetAABB();
@@ -32,7 +32,7 @@ namespace ForgeCore
         void RemoveIntersection(Brush *brush);
 
     private:
-        bool mDirty;
+        World *mWorld;
         glm::vec3 mPivot;
         AABB mBoundingBox;
         std::vector<Vertex> mVertices;

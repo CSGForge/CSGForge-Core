@@ -4,7 +4,7 @@ namespace ForgeCore
 {
     Brush *World::AddBrush()
     {
-        auto brush = new Brush();
+        auto brush = new Brush(this);
         mBrushes.push_back(brush);
         return brush;
     }
@@ -16,21 +16,29 @@ namespace ForgeCore
 
     std::set<Brush *> World::Update()
     {
-        std::set<Brush *> updated_brushes;
-        for (auto b : mBrushes)
+        for (auto b : mNeedFullRebuild)
         {
-            if (!b->IsDirty())
-                continue;
-
             b->RebuildFaces();
-            auto intersections = b->RebuildIntersections(mBrushes);
-            b->SetClean();
 
-            // Add to the updated brush list
-            updated_brushes.insert(b);
+            // TODO: Check if this is potentially recalculating multiple times in some cases (two intersecting brushes both have a full update)
+            auto intersections = b->RebuildIntersections(mBrushes);
             for (auto i : intersections)
-                updated_brushes.insert(i);
+                mNeedPartialRebuild.insert(i);
+            mNeedPartialRebuild.insert(b);
         }
+
+        for (auto b : mNeedPartialRebuild)
+        {
+        }
+
+        std::set<Brush *> updated_brushes = mNeedPartialRebuild;
+        mNeedFullRebuild.clear();
+        mNeedPartialRebuild.clear();
         return updated_brushes;
+    }
+
+    void World::RebuildBrush(Brush *brush)
+    {
+        mNeedFullRebuild.insert(brush);
     }
 }
