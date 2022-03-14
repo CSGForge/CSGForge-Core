@@ -5,22 +5,24 @@
 #include <glm/glm.hpp>
 
 #include "Plane.hpp"
+#include "Vertex.hpp"
 
 namespace ForgeCore
-{
+{    
     class Face
     {
     public:
         Face(Plane *plane);
         ~Face() = default;
 
-        void SetVertices(std::vector<glm::vec3> vertices);
-        std::vector<glm::vec3> GetVertices();
+        void SetVertices(std::vector<Vertex> vertices);
+        std::vector<Vertex> GetVertices();
         std::vector<unsigned int> GetIndices();
+        Plane GetPlane();
 
     private:
         Plane *mPlane;
-        std::vector<glm::vec3> mVertices;
+        std::vector<Vertex> mVertices;
         std::vector<unsigned int> mIndices;
     };
 }

@@ -7,7 +7,7 @@ namespace ForgeCore
         mPlane = plane;
     }
 
-    std::vector<glm::vec3> Face::GetVertices()
+    std::vector<Vertex> Face::GetVertices()
     {
         return mVertices;
     }
@@ -17,8 +17,12 @@ namespace ForgeCore
         return mIndices;
     }
 
-    void Face::SetVertices(std::vector<glm::vec3> vertices)
+    void Face::SetVertices(std::vector<Vertex> vertices)
     {
         mVertices = vertices;
+    }
+
+    Plane Face::GetPlane() {
+        return *mPlane;
     }
 }
