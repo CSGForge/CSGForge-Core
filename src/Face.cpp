@@ -20,11 +20,51 @@ namespace ForgeCore
     void Face::SetVertices(std::vector<Vertex> vertices)
     {
         mVertices = vertices;
+
+        // Build a set of face neighbours. Ugly
+        std::vector<Face> ns;
+        for (auto v : vertices)
+        {
+            for (auto f : v.mFaces)
+            {
+                if (f == this)
+                    continue;
+
+                bool unique = true;
+                for (auto n : ns)
+                {
+                    if (f->GetPlane() == n.GetPlane())
+                    {
+                        unique = false;
+                        break;
+                    }
+                }
+                if (unique)
+                    ns.push_back(*f);
+            }
+        }
+
+        mNeighbours = ns;
+    }
+
+    std::vector<Face> Face::GetNeighbourFaces()
+    {
+        return mNeighbours;
     }
 
     Plane Face::GetPlane()
     {
         return *mPlane;
+    }
+
+    void Face::SetRegions(std::vector<std::vector<Vertex>> regions)
+    {
+        mRegions = regions;
+    }
+
+    std::vector<std::vector<Vertex>> Face::GetRegions()
+    {
+        return mRegions;
     }
 
     void Face::Triangulate()

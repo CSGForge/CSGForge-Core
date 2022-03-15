@@ -1,7 +1,6 @@
 #include "Brush.hpp"
 
 #include <set>
-#include <iostream>
 
 #include <glm/gtc/matrix_access.hpp>
 
@@ -9,14 +8,6 @@
 
 namespace ForgeCore
 {
-    // void PushBackIfUnique(std::vector<glm::vec3> &vs, glm::vec3 v1, float eps)
-    // {
-    //     for (auto v2 : vs)
-    //         if (std::abs(v1.x - v2.x) <= eps && std::abs(v1.y - v2.y) <= eps && std::abs(v1.z - v2.z) <= eps)
-    //             return;
-    //     vs.push_back(v1);
-    // }
-
     void PushBackIfUnique(std::vector<Vertex> &vs, Vertex v1, float eps)
     {
         auto v1p = v1.mPosition;
@@ -35,6 +26,46 @@ namespace ForgeCore
         }
 
         vs.push_back(v1);
+    }
+
+    std::vector<Vertex> FindPolygonPath(std::vector<Vertex> unsorted_vs, Plane plane)
+    {
+        std::vector<Vertex> sorted_vs;
+
+        // Build a path along face edges
+        auto current = unsorted_vs.begin();
+        while (current != unsorted_vs.end())
+        {
+            Vertex v1 = *current;
+            sorted_vs.push_back(v1);
+            unsorted_vs.erase(current);
+
+            // Find me an edge!
+            for (int j = 0; j < unsorted_vs.size(); j++)
+            {
+                auto v2 = unsorted_vs[j];
+                int shared_faces = 0;
+                for (auto face : v1.mFaces)
+                    if (*std::find(v2.mFaces.begin(), v2.mFaces.end(), face) == face)
+                        shared_faces++;
+
+                // Edges only exist between two vertices if they share two faces
+                if (shared_faces == 2)
+                {
+                    current = unsorted_vs.begin() + j;
+                    break;
+                }
+            }
+        }
+
+        // Winding order of the path may be wrong so we need to reverse it
+        glm::vec3 v0 = sorted_vs[0].mPosition;
+        glm::vec3 v1 = sorted_vs[1].mPosition;
+        glm::vec3 v2 = sorted_vs[2].mPosition;
+        if (glm::dot(glm::cross(v1 - v0, v2 - v0), plane.mNormal) < 0)
+            std::reverse(sorted_vs.begin(), sorted_vs.end());
+
+        return sorted_vs;
     }
 
     Brush::Brush(World *world)
@@ -56,7 +87,6 @@ namespace ForgeCore
         {
             std::vector<Vertex> v;
             mFaces.push_back(Face(&mPlanes[i]));
-            mFaces[i].SetVertices(v);
             face_vertices.push_back(v);
         }
 
@@ -68,29 +98,9 @@ namespace ForgeCore
             {
                 for (int k = j + 1; k < n; k++)
                 {
-                    // Find the intersection of these 3 planes (if one exists)
-                    // `https://en.wikipedia.org/wiki/Cramer's_rule#Explicit_formulas_for_small_systems`
-                    auto p1 = mPlanes[i];
-                    auto p2 = mPlanes[j];
-                    auto p3 = mPlanes[k];
-
-                    // Build the matrix used in the denominator
-                    glm::mat3 m;
-                    m = glm::row(m, 0, p1.mNormal);
-                    m = glm::row(m, 1, p2.mNormal);
-                    m = glm::row(m, 2, p3.mNormal);
-
-                    // Epsilon used because floating point precision sucks
-                    float det_m = glm::determinant(m);
-                    if (std::abs(det_m) <= 0.001)
+                    glm::vec3 vertex_pos(0);
+                    if (!mPlanes[i].FindIntersectionPoint(mPlanes[j], mPlanes[k], vertex_pos))
                         continue;
-
-                    glm::mat3 mx(m), my(m), mz(m);
-                    glm::vec3 offsets(p1.mOffset, p2.mOffset, p3.mOffset);
-                    glm::vec3 vertex_pos(
-                        glm::determinant(glm::column(mx, 0, -offsets)) / det_m,
-                        glm::determinant(glm::column(my, 1, -offsets)) / det_m,
-                        glm::determinant(glm::column(mz, 2, -offsets)) / det_m);
 
                     // Check that the found vertex isn't outside of any of the planes
                     if (PointInPlanes(vertex_pos))
@@ -106,7 +116,6 @@ namespace ForgeCore
                     }
                 }
             }
-            // mFaces[i].SetVertices(face_vertices[i]);
         }
 
         // TODO: Seems messy extracting the vec3's like this idk
@@ -120,43 +129,89 @@ namespace ForgeCore
         // Reorder face vertices
         for (int i = 0; i < n; i++)
         {
-            std::vector<Vertex> unsorted_vs = face_vertices[i];
-            std::vector<Vertex> sorted_vs;
+            auto sorted_vs = FindPolygonPath(face_vertices[i], mFaces[i].GetPlane());
+            mFaces[i].SetVertices(sorted_vs);
+        }
+    }
 
-            // Build a path along face edges
-            auto current = unsorted_vs.begin();
-            while (current != unsorted_vs.end())
+    void Brush::RebuildRegions()
+    {
+        // For each plane find intersecting regions for each other world brush
+        // These regions are later subtracted from the main face region
+        for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
+        {
+            auto face = mFaces[f_idx];
+            auto plane = face.GetPlane();
+
+            std::vector<std::vector<Vertex>> subtractive_regions;
+
+            for (auto b : mWorld->GetBrushes())
             {
-                Vertex v1 = *current;
-                sorted_vs.push_back(v1);
-                unsorted_vs.erase(current);
+                if (b == this)
+                    continue;
 
-                // Find me an edge!
-                for (int j = 0; j < unsorted_vs.size(); j++)
+                std::vector<Vertex> brush_region;
+
+                // Find intersection points using 2 planes of other brush
+                auto planes = b->GetPlanes();
+                int n = planes.size();
+                for (int i = 0; i < n - 1; i++)
                 {
-                    auto v2 = unsorted_vs[j];
-                    int shared_faces = 0;
-                    for (auto face : v1.mFaces)
-                        if (*std::find(v2.mFaces.begin(), v2.mFaces.end(), face) == face)
-                            shared_faces++;
-
-                    // Edges only exist between two vertices if they share two faces
-                    if (shared_faces == 2)
+                    for (int j = i + 1; j < n; j++)
                     {
-                        current = unsorted_vs.begin() + j;
-                        break;
+                        // Is there a single intersection point beween these three planes?
+                        glm::vec3 vertex_pos(0);
+                        if (!plane.FindIntersectionPoint(planes[i], planes[j], vertex_pos))
+                            continue;
+
+                        // Is the point found within both brushes?
+                        if (PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
+                        {
+                            auto b_faces = b->GetFaces();
+                            std::vector<Face *> vertex_faces{&face, &b_faces[i], &b_faces[j]};
+                            Vertex vertex(vertex_pos, vertex_faces);
+
+                            PushBackIfUnique(brush_region, vertex, 0.0001);
+                        }
                     }
                 }
+
+                // Find intersection points using a neighbour plane and a plane of the other brush
+                auto ns = face.GetNeighbourFaces();
+                for (int i = 0; i < ns.size(); i++)
+                {
+                    for (int j = 0; j < n; j++)
+                    {
+                        // Is there a single intersection point beween these three planes?
+                        glm::vec3 vertex_pos(0);
+                        if (!plane.FindIntersectionPoint(ns[i].GetPlane(), planes[j], vertex_pos))
+                            continue;
+
+                        // Is the point found within both brushes?
+                        if (PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
+                        {
+                            auto b_faces = b->GetFaces();
+                            std::vector<Face *> vertex_faces{&face, &ns[i], &b_faces[j]};
+                            Vertex vertex(vertex_pos, vertex_faces);
+
+                            PushBackIfUnique(brush_region, vertex, 0.0001);
+                        }
+                    }
+                }
+
+                // If any face vertices are inside the other brush they're also a region point
+                auto vs = face.GetVertices();
+                for (auto v : face.GetVertices())
+                    if (b->PointInPlanes(v.mPosition))
+                        PushBackIfUnique(brush_region, v, 0.0001);
+
+                if (brush_region.size() > 0)
+                {
+                    auto sorted_brush_region = FindPolygonPath(brush_region, face.GetPlane());
+                    subtractive_regions.push_back(sorted_brush_region);
+                }
             }
-
-            // Winding order of the path may be wrong so we need to reverse it
-            glm::vec3 v0 = sorted_vs[0].mPosition;
-            glm::vec3 v1 = sorted_vs[1].mPosition;
-            glm::vec3 v2 = sorted_vs[2].mPosition;
-            if (glm::dot(glm::cross(v1 - v0, v2 - v0), mFaces[i].GetPlane().mNormal) < 0)
-                std::reverse(sorted_vs.begin(), sorted_vs.end());
-
-            mFaces[i].SetVertices(sorted_vs);
+            mFaces[f_idx].SetRegions(subtractive_regions);
         }
     }
 

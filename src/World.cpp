@@ -14,6 +14,13 @@ namespace ForgeCore
         return mBrushes;
     }
 
+    Brush *World::GetBrush(int index)
+    {
+        if (index >= 0 && index < mBrushes.size())
+            return mBrushes[index];
+        return nullptr;
+    }
+
     std::set<Brush *> World::Update()
     {
         // Full rebuilds occur when a brushes planes have been edited
@@ -32,6 +39,7 @@ namespace ForgeCore
             if (!mNeedFullRebuild.contains(b))
                 b->RebuildIntersections(mBrushes);
 
+            b->RebuildRegions();
             b->Triangulate();
             // TODO: Actual 2D boolean polygon operations on faces
         }

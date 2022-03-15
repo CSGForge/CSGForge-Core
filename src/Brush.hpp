@@ -20,6 +20,7 @@ namespace ForgeCore
         ~Brush() = default;
 
         void RebuildFaces();
+        void RebuildRegions();
         std::vector<Brush *> RebuildIntersections(std::vector<Brush *> brushes);
         AABB GetAABB();
         void SetPlanes(std::vector<Plane> planes);
