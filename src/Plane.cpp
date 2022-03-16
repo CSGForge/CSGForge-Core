@@ -3,17 +3,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
+#include <stdio.h>
+
 namespace ForgeCore
 {
     Plane::Plane(glm::vec3 normal, float offset)
     {
         mNormal = normal;
         mOffset = offset;
+        mBaseNormal = normal;
+        mBaseOffset = offset;
     }
 
     void Plane::Transform(glm::mat4 transformation)
     {
-        glm::vec4 plane{mNormal, mOffset};
+        glm::vec4 plane{mBaseNormal, mBaseOffset};
         plane = glm::transpose(glm::inverse(transformation)) * plane;
         mNormal = glm::vec3{plane.x, plane.y, plane.z};
         mOffset = plane.w;

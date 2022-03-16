@@ -13,6 +13,27 @@ namespace ForgeCore
 {
     class World;
 
+    struct Transform
+    {
+        glm::vec3 mTranslation;
+        glm::vec3 mScale;
+        glm::vec3 mRotation;
+
+        Transform()
+        {
+            mScale = glm::vec3(1);
+            mRotation = glm::vec3(0);
+            mTranslation = glm::vec3(0);
+        }
+
+        Transform(glm::vec3 scale, glm::vec3 rotation, glm::vec3 translation)
+        {
+            mScale = scale;
+            mRotation = rotation;
+            mTranslation = translation;
+        }
+    };
+
     class Brush
     {
     public:
@@ -28,6 +49,8 @@ namespace ForgeCore
         std::vector<Face> GetFaces();
         std::vector<Vertex> GetVertices();
         std::vector<Brush *> GetIntersections();
+        void SetTransform(Transform transform);
+        Transform GetTransform();
         bool PointInPlanes(glm::vec3 point);
         void AddIntersection(Brush *brush);
         void RemoveIntersection(Brush *brush);
@@ -41,5 +64,8 @@ namespace ForgeCore
         std::vector<Plane> mPlanes;
         std::vector<Face> mFaces;
         std::vector<Brush *> mIntersections;
+
+        Transform mTransform;
+        glm::mat4 mTransformMatrix;
     };
 }

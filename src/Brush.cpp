@@ -2,6 +2,9 @@
 
 #include <set>
 
+#include <stdio.h>
+
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
 #include "World.hpp"
@@ -71,6 +74,8 @@ namespace ForgeCore
     Brush::Brush(World *world)
     {
         mWorld = world;
+        mTransform = Transform();
+        mTransformMatrix = glm::mat4(1);
     }
 
     void Brush::RebuildFaces()
@@ -266,6 +271,8 @@ namespace ForgeCore
     void Brush::SetPlanes(std::vector<Plane> planes)
     {
         mPlanes = planes;
+        for (int i = 0; i < mPlanes.size(); i++)
+            mPlanes[i].Transform(mTransformMatrix);
         mWorld->RebuildBrush(this);
     }
 
@@ -287,6 +294,24 @@ namespace ForgeCore
     std::vector<Brush *> Brush::GetIntersections()
     {
         return mIntersections;
+    }
+
+    void Brush::SetTransform(Transform transform)
+    {
+        // TODO: Rotation lol
+        glm::mat4 tmat(1);
+        tmat = glm::translate(tmat, transform.mTranslation);
+        tmat = glm::scale(tmat, transform.mScale);
+        for (int i = 0; i < mPlanes.size(); i++)
+            mPlanes[i].Transform(tmat);
+
+        mTransformMatrix = tmat;
+        mTransform = transform;
+    }
+
+    Transform Brush::GetTransform()
+    {
+        return mTransform;
     }
 
     void Brush::Triangulate()
