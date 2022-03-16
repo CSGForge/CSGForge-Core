@@ -164,8 +164,9 @@ namespace ForgeCore
                         if (!plane.FindIntersectionPoint(planes[i], planes[j], vertex_pos))
                             continue;
 
-                        // Is the point found within both brushes?
-                        if (PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
+                        // Is the point found within the other brush?
+                        // Doesn't need to be within ourself, just along the plane we're currently concerned about
+                        if (b->PointInPlanes(vertex_pos))
                         {
                             auto b_faces = b->GetFaces();
                             std::vector<Face *> vertex_faces{&face, &b_faces[i], &b_faces[j]};
@@ -175,35 +176,6 @@ namespace ForgeCore
                         }
                     }
                 }
-
-                // Find intersection points using a neighbour plane and a plane of the other brush
-                auto ns = face.GetNeighbourFaces();
-                for (int i = 0; i < ns.size(); i++)
-                {
-                    for (int j = 0; j < n; j++)
-                    {
-                        // Is there a single intersection point beween these three planes?
-                        glm::vec3 vertex_pos(0);
-                        if (!plane.FindIntersectionPoint(ns[i].GetPlane(), planes[j], vertex_pos))
-                            continue;
-
-                        // Is the point found within both brushes?
-                        if (PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
-                        {
-                            auto b_faces = b->GetFaces();
-                            std::vector<Face *> vertex_faces{&face, &ns[i], &b_faces[j]};
-                            Vertex vertex(vertex_pos, vertex_faces);
-
-                            PushBackIfUnique(brush_region, vertex, 0.0001);
-                        }
-                    }
-                }
-
-                // If any face vertices are inside the other brush they're also a region point
-                auto vs = face.GetVertices();
-                for (auto v : face.GetVertices())
-                    if (b->PointInPlanes(v.mPosition))
-                        PushBackIfUnique(brush_region, v, 0.0001);
 
                 if (brush_region.size() > 0)
                 {
