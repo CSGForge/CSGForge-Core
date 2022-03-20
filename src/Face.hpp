@@ -11,15 +11,17 @@
 namespace ForgeCore
 {
     struct Region;
+    class Brush;
 
     class Face
     {
     public:
-        Face(Plane *plane);
+        Face(Brush *brush, Plane *plane);
         ~Face() = default;
 
         void SetVertices(std::vector<Vertex> vertices);
         std::vector<Vertex> GetVertices();
+        std::vector<glm::vec3> GetTriangleVertices();
         std::vector<unsigned int> GetIndices();
         std::vector<Face> GetNeighbourFaces();
         Plane GetPlane();
@@ -28,9 +30,11 @@ namespace ForgeCore
         void Triangulate();
 
     private:
+        Brush *mBrush;
         Plane *mPlane;
         std::vector<Face> mNeighbours;
         std::vector<Vertex> mVertices;
+        std::vector<glm::vec3> mTriangleVertices;
         std::vector<unsigned int> mIndices;
         std::vector<Region> mRegions;
     };

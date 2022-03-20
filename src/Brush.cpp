@@ -115,7 +115,7 @@ namespace ForgeCore
         for (int i = 0; i < n; i++)
         {
             std::vector<Vertex> v;
-            mFaces.push_back(Face(&mPlanes[i]));
+            mFaces.push_back(Face(this, &mPlanes[i]));
             face_vertices.push_back(v);
         }
 

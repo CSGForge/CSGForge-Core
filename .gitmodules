@@ -1,3 +1,6 @@
 [submodule "libs/glm"]
 	path = libs/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "libs/CDT"]
+	path = libs/CDT
+	url = https://github.com/artem-ogre/CDT.git
