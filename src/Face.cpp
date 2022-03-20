@@ -105,26 +105,19 @@ namespace ForgeCore
         // Use constrained delaunay triangulation to triangulate the polygon
         CDT::Triangulation<double> cdt;
 
-        // Get all the vertices
+        // Get all the vertices/edges
         std::vector<CDT::V2d<double>> vs;
-        for (int i = 0; i < polygon.ncontours(); i++)
-        {
-            auto contour = polygon.contour(i);
-            for (int j = 0; j < contour.nvertices(); j++)
-            {
-                auto v = contour.vertex(j);
-                vs.push_back({v.x(), v.y()});
-            }
-        }
-
-        // Get all the edges
         std::vector<CDT::Edge> es;
         unsigned int offset = 0;
-        for (int i = 0; i < polygon.ncontours(); i++)
+        for (unsigned int i = 0; i < polygon.ncontours(); i++)
         {
             auto contour = polygon.contour(i);
             for (unsigned int j = 0; j < contour.nvertices(); j++)
+            {
+                auto v = contour.vertex(j);
+                vs.push_back({v.x(), v.y()});
                 es.push_back({offset + j, offset + (j + 1) % contour.nvertices()});
+            }
             offset += contour.nvertices();
         }
 
@@ -143,12 +136,10 @@ namespace ForgeCore
         }
 
         // Translate vertices back to 3d and set them
-        // TODO: Somewhere along the way these get a little bit fucked up
-        // Actually it's only some faces? Weird
         auto un = mPlane->mNormal / glm::length(mPlane->mNormal);
-        auto loc_o = un * (-mPlane->mOffset);
+        auto loc_o = un * (-mPlane->mOffset / glm::length(mPlane->mNormal));
         auto loc_x = mVertices[0].mPosition - loc_o;
-        auto loc_y = glm::cross(un, loc_x);
+        auto loc_y = glm::cross(mPlane->mNormal, loc_x);
         loc_x /= glm::length(loc_x);
         loc_y /= glm::length(loc_y);
         for (auto v : vs)
