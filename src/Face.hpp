@@ -20,11 +20,10 @@ namespace ForgeCore
 
         void SetVertices(std::vector<Vertex> vertices);
         std::vector<Vertex> GetVertices();
-        std::vector<Vertex> GetRegionVertices();
         std::vector<unsigned int> GetIndices();
         std::vector<Face> GetNeighbourFaces();
         Plane GetPlane();
-        void SetRegions(std::vector<Region> regions, std::vector<Vertex> vertices);
+        void SetRegions(std::vector<Region> regions);
         std::vector<Region> GetRegions();
         void Triangulate();
 
@@ -32,7 +31,6 @@ namespace ForgeCore
         Plane *mPlane;
         std::vector<Face> mNeighbours;
         std::vector<Vertex> mVertices;
-        std::vector<Vertex> mRegionVertices;
         std::vector<unsigned int> mIndices;
         std::vector<Region> mRegions;
     };

@@ -160,7 +160,7 @@ namespace ForgeCore
             mFaces[i].SetVertices(FindPolygonPath(face_vertices[i], mFaces[i].GetPlane()));
     }
 
-    std::vector<Region> Categorise(std::vector<Vertex> &verts, std::vector<Region> rs, Region rb)
+    std::vector<Region> Categorise(std::vector<Region> rs, Region rb)
     {
         // Operation table used for finding new category
         // Indexed using [rb.operation][ra.category][rb.category]
@@ -178,13 +178,9 @@ namespace ForgeCore
         bool rb_swapped = false;
         for (auto ra : rs)
         {
-            cbop::Polygon new_ra;
+            cbop::Polygon new_ra, new_rb, new_rc;
             cbop::compute(ra.mPolygon, rb.mPolygon, new_ra, cbop::DIFFERENCE);
-
-            cbop::Polygon new_rb;
             cbop::compute(rb.mPolygon, ra.mPolygon, new_rb, cbop::DIFFERENCE);
-
-            cbop::Polygon new_rc;
             cbop::compute(ra.mPolygon, rb.mPolygon, new_rc, cbop::INTERSECTION);
 
             if (new_ra.ncontours() != 0)
@@ -262,14 +258,12 @@ namespace ForgeCore
         return vs;
     }
 
-    Region BuildRegion(std::vector<Vertex> &vs, Brush *b, Face rf, std::vector<Vertex> rvs)
+    Region BuildRegion(Brush *b, Face rf, std::vector<Vertex> rvs)
     {
         Plane rp = rf.GetPlane();
 
         Region r;
         r.mBrush = b;
-        for (auto v : rvs)
-            r.mIndices.push_back(PushBackIfUnique(vs, v, 0.0001));
 
         // A region is only (reverse) aligned if all vertices are on a plane
         // Aligned if matching normals, reverse aligned if opposite normals
@@ -325,7 +319,7 @@ namespace ForgeCore
         {
             std::vector<Region> regions;
             auto face = mFaces[f_idx];
-            std::vector<Vertex> intersecting_verts = face.GetVertices();
+            auto face_region = BuildRegion(this, face, face.GetVertices());
             auto plane = face.GetPlane();
             bool before_self = true;
             for (auto b : mIntersections)
@@ -333,8 +327,7 @@ namespace ForgeCore
                 // If we've just past ourself in the timing, insert face region
                 if (before_self != mWorld->GetTime(b) < mWorld->GetTime(this))
                 {
-                    auto region = BuildRegion(intersecting_verts, this, face, face.GetVertices());
-                    regions = Categorise(intersecting_verts, regions, region);
+                    regions = Categorise(regions, face_region);
                     before_self = false;
                 }
 
@@ -346,19 +339,15 @@ namespace ForgeCore
                     continue;
 
                 // Create a new region
-                auto region = BuildRegion(intersecting_verts, b, face, FindPolygonPath(vs, plane));
-                regions = Categorise(intersecting_verts, regions, region);
+                regions = Categorise(regions, BuildRegion(b, face, FindPolygonPath(vs, plane)));
             }
 
             // This only happens if there are no intersections on this face
             // or all the intersecting brushes are before ourself
             if (before_self)
-            {
-                auto region = BuildRegion(intersecting_verts, this, face, face.GetVertices());
-                regions = Categorise(intersecting_verts, regions, region);
-            }
+                regions = Categorise(regions, face_region);
 
-            mFaces[f_idx].SetRegions(regions, intersecting_verts);
+            mFaces[f_idx].SetRegions(regions);
         }
     }
 

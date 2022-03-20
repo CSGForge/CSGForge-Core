@@ -14,11 +14,6 @@ namespace ForgeCore
         return mVertices;
     }
 
-    std::vector<Vertex> Face::GetRegionVertices()
-    {
-        return mRegionVertices;
-    }
-
     std::vector<unsigned int> Face::GetIndices()
     {
         return mIndices;
@@ -64,10 +59,9 @@ namespace ForgeCore
         return *mPlane;
     }
 
-    void Face::SetRegions(std::vector<Region> regions, std::vector<Vertex> vertices)
+    void Face::SetRegions(std::vector<Region> regions)
     {
         mRegions = regions;
-        mRegionVertices = vertices;
     }
 
     std::vector<Region> Face::GetRegions()

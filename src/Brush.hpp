@@ -90,7 +90,6 @@ namespace ForgeCore
     struct Region
     {
         Brush *mBrush;
-        std::vector<int> mIndices;
         RCategory mCategory;
         cbop::Polygon mPolygon;
     };
