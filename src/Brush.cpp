@@ -1,7 +1,7 @@
 #include "Brush.hpp"
 
+// TODO: Remove unneccesary includes
 #include <set>
-
 #include <stdio.h>
 
 #include <glm/gtx/transform.hpp>
@@ -172,6 +172,8 @@ namespace ForgeCore
                                                {OUTSIDE, REVERSE_ALIGNED, OUTSIDE, REVERSE_ALIGNED},
                                                {OUTSIDE, OUTSIDE, OUTSIDE, OUTSIDE}}};
 
+        auto contour = cbop::Contour();
+
         // TODO: Replace with proper categorisation
         rs.push_back(rb);
         return rs;
@@ -216,6 +218,60 @@ namespace ForgeCore
         return vs;
     }
 
+    Region BuildRegion(std::vector<Vertex> &vs, Brush *b, Face rf, std::vector<Vertex> rvs)
+    {
+        Plane rp = rf.GetPlane();
+
+        Region r;
+        r.mBrush = b;
+        for (auto v : rvs)
+            r.mIndices.push_back(PushBackIfUnique(vs, v, 0.0001));
+
+        // A region is only (reverse) aligned if all vertices are on a plane
+        // Aligned if matching normals, reverse aligned if opposite normals
+        // We know the region has a normal matching the plane so just compare that against other brush plane
+        // If not (reverse) aligned then it's inside (an intersection exists, it can't be outside)
+        r.mCategory = INSIDE;
+
+        auto un1 = rp.mNormal / glm::length(rp.mNormal);
+        for (auto p : b->GetPlanes())
+        {
+            int num_aligned = 0;
+            for (auto v : rvs)
+                if (std::abs(p.mNormal.x * v.mPosition.x + p.mNormal.y * v.mPosition.y + p.mNormal.z * v.mPosition.z + p.mOffset) < 0.0001)
+                    num_aligned++;
+
+            if (num_aligned == rvs.size())
+            {
+                auto un2 = p.mNormal / glm::length(p.mNormal);
+                r.mCategory = (un1 == un2) ? ALIGNED : REVERSE_ALIGNED;
+                break;
+            }
+        }
+
+        // Convert vertices to local plane coordinates for later polygon clipping
+        // Initially found regions will only have a single, external, contour
+        // See: https://stackoverflow.com/questions/26369618/getting-local-2d-coordinates-of-vertices-of-a-planar-polygon-in-3d-space
+        auto rf_vs = rf.GetVertices();
+        auto loc_o = un1 * (-rp.mOffset);        // Point on plane closest to origin
+        auto loc_x = rf_vs[0].mPosition - loc_o; // Local X axis
+        auto loc_y = glm::cross(un1, loc_x);     // Local Y axis
+
+        // Normalise axis
+        loc_x /= glm::length(loc_x);
+        loc_y /= glm::length(loc_y);
+
+        cbop::Contour contour;
+        for (auto v : rvs)
+        {
+            auto p = v.mPosition - loc_o;
+            contour.add({glm::dot(p, loc_x), glm::dot(p, loc_y)});
+        }
+        r.mPolygon.push_back(contour);
+
+        return r;
+    }
+
     void Brush::RebuildRegions()
     {
         // If there's no intersections we can just be quick and painless
@@ -230,14 +286,10 @@ namespace ForgeCore
             bool before_self = true;
             for (auto b : mIntersections)
             {
+                // If we've just past ourself in the timing, insert face region
                 if (before_self != mWorld->GetTime(b) < mWorld->GetTime(this))
                 {
-                    // We've just past ourself in the timing, so insert face as a region
-                    Region region;
-                    region.mBrush = this;
-                    region.mCategory = ALIGNED;
-                    for (int i = 0; i < face.GetVertices().size(); i++)
-                        region.mIndices.push_back(i);
+                    auto region = BuildRegion(intersecting_verts, this, face, face.GetVertices());
                     regions = Categorise(intersecting_verts, regions, region);
                     before_self = false;
                 }
@@ -250,31 +302,7 @@ namespace ForgeCore
                     continue;
 
                 // Create a new region
-                Region region;
-                region.mBrush = b;
-                for (auto v : FindPolygonPath(vs, face.GetPlane()))
-                    region.mIndices.push_back(PushBackIfUnique(intersecting_verts, v, 0.0001));
-                // A region is only (reverse) aligned if all vertices are on a plane
-                // Aligned if matching normals, reverse aligned if opposite normals
-                // We know the region has a normal matching the plane so just compare that against other brush plane
-                // If not (reverse) aligned then it's inside (an intersection exists, it can't be outside)
-                region.mCategory = INSIDE;
-                for (auto p : b->GetPlanes())
-                {
-                    int num_aligned = 0;
-                    for (auto v : vs)
-                        if (std::abs(p.mNormal.x * v.mPosition.x + p.mNormal.y * v.mPosition.y + p.mNormal.z * v.mPosition.z + p.mOffset) < 0.0001)
-                            num_aligned++;
-
-                    if (num_aligned == vs.size())
-                    {
-                        // TODO: Check if this works with a simple dot product
-                        auto un1 = plane.mNormal / glm::length(plane.mNormal);
-                        auto un2 = p.mNormal / glm::length(p.mNormal);
-                        region.mCategory = (un1 == un2) ? ALIGNED : REVERSE_ALIGNED;
-                        break;
-                    }
-                }
+                auto region = BuildRegion(intersecting_verts, b, face, FindPolygonPath(vs, plane));
                 regions = Categorise(intersecting_verts, regions, region);
             }
             mFaces[f_idx].SetRegions(regions, intersecting_verts);

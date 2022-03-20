@@ -3,11 +3,12 @@ project "CSGForge-Core"
     language "C++"
     cppdialect "C++20"
 
-    includedirs {"include"}
+    includedirs {"include", "libs/glm", "libs/cbop"}
     files {
         "src/**.*"
     }
 
-    links {"glm"}
+    links {"glm", "cbop"}
 
 include "libs/glm.lua"
+include "libs/cbop.lua"

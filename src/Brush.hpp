@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <cbop/polygon.h>
 
 #include "AABB.hpp"
 #include "Plane.hpp"
@@ -89,5 +90,6 @@ namespace ForgeCore
         Brush *mBrush;
         std::vector<int> mIndices;
         RCategory mCategory;
+        cbop::Polygon mPolygon;
     };
 }
