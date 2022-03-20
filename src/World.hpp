@@ -7,6 +7,13 @@
 
 namespace ForgeCore
 {
+    // Enum values correspond to face region categories (3 = OUTSIDE, 0 = INSIDE)
+    enum WorldType
+    {
+        AIR_WORLD = 3,
+        SOLID_WORLD = 0
+    };
+
     class World
     {
     public:
@@ -17,6 +24,8 @@ namespace ForgeCore
         std::vector<Brush *> GetBrushes();
         Brush *GetBrush(int index);
         int GetTime(Brush *b);
+        void SetWorldType(WorldType worldType);
+        WorldType GetWorldType();
         std::set<Brush *> Update();
         void RebuildBrush(Brush *brush);
 
@@ -24,5 +33,6 @@ namespace ForgeCore
         std::vector<Brush *> mBrushes;
         std::set<Brush *> mNeedFullRebuild;
         std::set<Brush *> mNeedPartialRebuild;
+        WorldType mWorldType = AIR_WORLD;
     };
 }

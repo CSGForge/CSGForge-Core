@@ -29,6 +29,16 @@ namespace ForgeCore
         return -1;
     }
 
+    void World::SetWorldType(WorldType worldType)
+    {
+        mWorldType = worldType;
+    }
+
+    WorldType World::GetWorldType()
+    {
+        return mWorldType;
+    }
+
     std::set<Brush *> World::Update()
     {
         // Full rebuilds occur when a brushes planes have been edited

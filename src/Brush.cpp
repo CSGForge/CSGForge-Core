@@ -212,9 +212,8 @@ namespace ForgeCore
 
         // If we've not swapped rb we haven't modified it's category
         // This means we need to operate against the void
-        // TODO: Allow for different void types (INSIDE = solid, OUTSIDE = air)
         if (!rb_swapped)
-            rb.mCategory = op_table[rb.mBrush->GetOperation()][OUTSIDE][rb.mCategory];
+            rb.mCategory = op_table[rb.mBrush->GetOperation()][rb.mBrush->GetWorld()->GetWorldType()][rb.mCategory];
 
         // Add all the new regions to the end
         for (auto rc : rcs)
@@ -437,6 +436,11 @@ namespace ForgeCore
     AABB Brush::GetAABB()
     {
         return mBoundingBox;
+    }
+
+    World *Brush::GetWorld()
+    {
+        return mWorld;
     }
 
     void Brush::SetOperation(Operation operation)

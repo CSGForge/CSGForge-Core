@@ -59,6 +59,7 @@ namespace ForgeCore
         void RebuildRegions();
         std::vector<Brush *> RebuildIntersections(std::vector<Brush *> brushes);
         AABB GetAABB();
+        World *GetWorld();
         void SetOperation(Operation operation);
         Operation GetOperation();
         void SetPlanes(std::vector<Plane> planes);
@@ -81,7 +82,7 @@ namespace ForgeCore
         std::vector<Plane> mPlanes;
         std::vector<Face> mFaces;
         std::vector<Brush *> mIntersections;
-        Operation mOperation = ADDITION;
+        Operation mOperation;
         Transform mTransform;
         glm::mat4 mTransformMatrix;
     };
