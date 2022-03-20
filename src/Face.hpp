@@ -10,6 +10,8 @@
 
 namespace ForgeCore
 {
+    struct Region;
+
     class Face
     {
     public:
@@ -18,18 +20,20 @@ namespace ForgeCore
 
         void SetVertices(std::vector<Vertex> vertices);
         std::vector<Vertex> GetVertices();
+        std::vector<Vertex> GetRegionVertices();
         std::vector<unsigned int> GetIndices();
         std::vector<Face> GetNeighbourFaces();
         Plane GetPlane();
-        void SetRegions(std::vector<std::vector<Vertex>> regions);
-        std::vector<std::vector<Vertex>> GetRegions();
+        void SetRegions(std::vector<Region> regions, std::vector<Vertex> vertices);
+        std::vector<Region> GetRegions();
         void Triangulate();
 
     private:
         Plane *mPlane;
         std::vector<Face> mNeighbours;
         std::vector<Vertex> mVertices;
+        std::vector<Vertex> mRegionVertices;
         std::vector<unsigned int> mIndices;
-        std::vector<std::vector<Vertex>> mRegions;
+        std::vector<Region> mRegions;
     };
 }

@@ -21,6 +21,14 @@ namespace ForgeCore
         return nullptr;
     }
 
+    int World::GetTime(Brush *b)
+    {
+        for (int i = 0; i < mBrushes.size(); i++)
+            if (mBrushes[i] == b)
+                return i;
+        return -1;
+    }
+
     std::set<Brush *> World::Update()
     {
         // Full rebuilds occur when a brushes planes have been edited

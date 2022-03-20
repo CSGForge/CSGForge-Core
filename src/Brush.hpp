@@ -34,6 +34,20 @@ namespace ForgeCore
         }
     };
 
+    enum Operation
+    {
+        ADDITION,
+        SUBTRACTION
+    };
+
+    enum RCategory
+    {
+        INSIDE,
+        ALIGNED,
+        REVERSE_ALIGNED,
+        OUTSIDE
+    };
+
     class Brush
     {
     public:
@@ -44,6 +58,7 @@ namespace ForgeCore
         void RebuildRegions();
         std::vector<Brush *> RebuildIntersections(std::vector<Brush *> brushes);
         AABB GetAABB();
+        Operation GetOperation();
         void SetPlanes(std::vector<Plane> planes);
         std::vector<Plane> GetPlanes();
         std::vector<Face> GetFaces();
@@ -64,8 +79,15 @@ namespace ForgeCore
         std::vector<Plane> mPlanes;
         std::vector<Face> mFaces;
         std::vector<Brush *> mIntersections;
-
+        Operation mOperation;
         Transform mTransform;
         glm::mat4 mTransformMatrix;
+    };
+
+    struct Region
+    {
+        Brush *mBrush;
+        std::vector<int> mIndices;
+        RCategory mCategory;
     };
 }

@@ -11,6 +11,28 @@
 
 namespace ForgeCore
 {
+    std::vector<glm::vec2> PointsInRegion(std::vector<glm::vec2> r_vs, std::vector<glm::vec2> vs)
+    {
+        // Regions are convex, so we can check if a point is inside it by forming triangles and checking against them
+        std::vector<glm::vec2> vs_in_r;
+        auto v0 = r_vs[0];
+        auto v1 = r_vs[1];
+        for (auto p : vs)
+        {
+            for (int k = 2; k < r_vs.size(); k++)
+            {
+                // See: http://totologic.blogspot.com/2014/01/accurate-point-in-triangle-test.html
+                auto v2 = r_vs[2];
+                float zz = ((v1.y - v2.y) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.y - v2.y));
+                float a = ((v1.y - v2.y) * (p.x - v2.x) + (v2.x - v1.x) * (p.y - v2.y)) / zz;
+                float b = ((v2.y - v0.y) * (p.x - v2.x) + (v0.x - v2.x) * (p.y - v2.y)) / zz;
+                if (0 <= a && a <= 0 && 0 <= b && b <= 1 && a + b <= 1)
+                    vs_in_r.push_back(p);
+            }
+        }
+        return vs_in_r;
+    }
+
     int PushBackIfUnique(std::vector<Vertex> &vs, Vertex v1, float eps)
     {
         auto v1p = v1.mPosition;
@@ -137,127 +159,126 @@ namespace ForgeCore
             mFaces[i].SetVertices(FindPolygonPath(face_vertices[i], mFaces[i].GetPlane()));
     }
 
-    enum RCategory
+    std::vector<Region> Categorise(std::vector<Vertex> &verts, std::vector<Region> rs, Region rb)
     {
-        INSIDE,
-        ALIGNED,
-        REVERSE_ALIGNED,
-        OUTSIDE
-    };
+        // Operation table used for finding new category
+        // Indexed using [rb.operation][ra.category][rb.category]
+        static RCategory op_table[2][4][4] = {{{INSIDE, INSIDE, INSIDE, INSIDE},
+                                               {INSIDE, OUTSIDE, INSIDE, ALIGNED},
+                                               {INSIDE, INSIDE, OUTSIDE, REVERSE_ALIGNED},
+                                               {INSIDE, OUTSIDE, OUTSIDE, OUTSIDE}},
+                                              {{OUTSIDE, REVERSE_ALIGNED, ALIGNED, INSIDE},
+                                               {OUTSIDE, OUTSIDE, ALIGNED, ALIGNED},
+                                               {OUTSIDE, REVERSE_ALIGNED, OUTSIDE, REVERSE_ALIGNED},
+                                               {OUTSIDE, OUTSIDE, OUTSIDE, OUTSIDE}}};
 
-    struct Region
+        // TODO: Replace with proper categorisation
+        rs.push_back(rb);
+        return rs;
+    }
+
+    std::vector<Vertex> FindIntersectingVertices(Face f, Brush *b0, Brush *b1)
     {
-        Brush *mBrush;
-        std::vector<int> mIndices;
-        RCategory mCategory;
-    };
+        // This is essentially cutting the face using the planes of b0 and b1
+        // TODO: See if doing that explicitly is faster
+
+        std::vector<Vertex> vs;
+        auto f_plane = f.GetPlane();
+        auto b1_planes = b1->GetPlanes();
+        auto b1_faces = b1->GetFaces();
+        int n = b1_planes.size();
+
+        // Three types of intersecting vertices exist:
+        //  (1) Face bounding vertices that are within the other brush
+        for (auto v : f.GetVertices())
+            if (b1->PointInPlanes(v.mPosition))
+                PushBackIfUnique(vs, v, 0.0001);
+
+        //  (2) Vertices that are on a face and lie along a face edge of the other brush
+        for (int i = 0; i < n - 1; i++)
+            for (int j = i + 1; j < n; j++)
+            {
+                glm::vec3 vertex_pos(0);
+                if (f_plane.FindIntersectionPoint(b1_planes[i], b1_planes[j], vertex_pos) && b0->PointInPlanes(vertex_pos) && b1->PointInPlanes(vertex_pos))
+                    PushBackIfUnique(vs, {vertex_pos, {&f, &b1_faces[i], &b1_faces[j]}}, 0.0001);
+            }
+
+        //  (3) Vertices that lie along a face edge and are on a face of the other brush
+        auto ns = f.GetNeighbourFaces();
+        for (int i = 0; i < ns.size(); i++)
+            for (int j = 0; j < n; j++)
+            {
+                glm::vec3 vertex_pos(0);
+                if (f_plane.FindIntersectionPoint(ns[i].GetPlane(), b1_planes[j], vertex_pos) && b0->PointInPlanes(vertex_pos) && b1->PointInPlanes(vertex_pos))
+                    PushBackIfUnique(vs, {vertex_pos, {&f, &ns[i], &b1_faces[j]}}, 0.0001);
+            }
+
+        return vs;
+    }
 
     void Brush::RebuildRegions()
     {
-        // Step 1: Find all the vertices of intersection and build initial regions
-        // Three types of intersecting vertices exist:
-        //  (1) Face bounding vertices that are within the other brush
-        //  (2) Vertices that are on a face and lie along a face edge ot the other brush
-        //  (3) Vertices that lie along a face edge and are on a face of the other brush
-        std::vector<Vertex> intersecting_verts;
-        std::vector<std::vector<Region>> regions;
+        // If there's no intersections we can just be quick and painless
+        // TODO: Early insert and return of face regions if no intersections
+
         for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
         {
-            std::vector<Region> f_regions;
+            std::vector<Region> regions;
             auto face = mFaces[f_idx];
+            std::vector<Vertex> intersecting_verts = face.GetVertices();
             auto plane = face.GetPlane();
-
+            bool before_self = true;
             for (auto b : mIntersections)
             {
+                if (before_self != mWorld->GetTime(b) < mWorld->GetTime(this))
+                {
+                    // We've just past ourself in the timing, so insert face as a region
+                    Region region;
+                    region.mBrush = this;
+                    region.mCategory = ALIGNED;
+                    for (int i = 0; i < face.GetVertices().size(); i++)
+                        region.mIndices.push_back(i);
+                    regions = Categorise(intersecting_verts, regions, region);
+                    before_self = false;
+                }
+
+                // TODO: Move onto next brush if intersecting before self and AABB is entirely contained
+
+                // Find any intersection points between this face and the brush
+                auto vs = FindIntersectingVertices(face, this, b);
+                if (vs.size() == 0) // If there's no intersecting vertices just move on to the next brush
+                    continue;
+
+                // Create a new region
                 Region region;
-                std::vector<Vertex> brush_region;
-                auto planes = b->GetPlanes();
-                int n = planes.size();
-                auto b_faces = b->GetFaces();
-
-                // Case 1
-                for (auto v : face.GetVertices())
-                    if (b->PointInPlanes(v.mPosition))
-                        PushBackIfUnique(brush_region, v, 0.0001);
-
-                // Case 2
-                for (int i = 0; i < n - 1; i++)
+                region.mBrush = b;
+                for (auto v : FindPolygonPath(vs, face.GetPlane()))
+                    region.mIndices.push_back(PushBackIfUnique(intersecting_verts, v, 0.0001));
+                // A region is only (reverse) aligned if all vertices are on a plane
+                // Aligned if matching normals, reverse aligned if opposite normals
+                // We know the region has a normal matching the plane so just compare that against other brush plane
+                // If not (reverse) aligned then it's inside (an intersection exists, it can't be outside)
+                region.mCategory = INSIDE;
+                for (auto p : b->GetPlanes())
                 {
-                    for (int j = i + 1; j < n; j++)
+                    int num_aligned = 0;
+                    for (auto v : vs)
+                        if (std::abs(p.mNormal.x * v.mPosition.x + p.mNormal.y * v.mPosition.y + p.mNormal.z * v.mPosition.z + p.mOffset) < 0.0001)
+                            num_aligned++;
+
+                    if (num_aligned == vs.size())
                     {
-                        glm::vec3 vertex_pos(0);
-                        if (plane.FindIntersectionPoint(planes[i], planes[j], vertex_pos) && PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
-                            PushBackIfUnique(brush_region, {vertex_pos, {&face, &b_faces[i], &b_faces[j]}}, 0.0001);
+                        // TODO: Check if this works with a simple dot product
+                        auto un1 = plane.mNormal / glm::length(plane.mNormal);
+                        auto un2 = p.mNormal / glm::length(p.mNormal);
+                        region.mCategory = (un1 == un2) ? ALIGNED : REVERSE_ALIGNED;
+                        break;
                     }
                 }
-
-                // Case 3
-                auto ns = face.GetNeighbourFaces();
-                for (int i = 0; i < ns.size(); i++)
-                {
-                    for (int j = 0; j < n; j++)
-                    {
-                        glm::vec3 vertex_pos(0);
-                        if (plane.FindIntersectionPoint(ns[i].GetPlane(), planes[j], vertex_pos) && PointInPlanes(vertex_pos) && b->PointInPlanes(vertex_pos))
-                            PushBackIfUnique(brush_region, {vertex_pos, {&face, &ns[i], &b_faces[j]}}, 0.0001);
-                    }
-                }
-
-                // Add vertex to the face list and create the initial region
-                if (brush_region.size() > 0)
-                {
-                    // A region is only (reverse) aligned if all vertices are on a plane
-                    // Aligned if matching normals, reverse aligned if opposite normals
-                    // We know the region has a normal matching the plane so just compare that against other brush plane
-                    // If not (reverse) aligned then it's inside (an intersection exists, it can't be outside)
-                    auto path = FindPolygonPath(brush_region, face.GetPlane());
-                    region.mCategory = INSIDE;
-                    for (auto p : planes)
-                    {
-                        int num_aligned = 0;
-                        for (auto v : path)
-                            if (std::abs(p.mNormal.x * v.mPosition.x + p.mNormal.y * v.mPosition.y + p.mNormal.z * v.mPosition.z + p.mOffset) < 0.0001)
-                                num_aligned++;
-
-                        if (num_aligned == path.size())
-                        {
-                            auto un1 = plane.mNormal / glm::length(plane.mNormal);
-                            auto un2 = p.mNormal / glm::length(p.mNormal);
-                            region.mCategory = (un1 == un2) ? ALIGNED : REVERSE_ALIGNED;
-                            break;
-                        }
-                    }
-
-                    // Calculates the region indices and adds the vertices to the face list
-                    for (auto v : path)
-                        region.mIndices.push_back(PushBackIfUnique(intersecting_verts, v, 0.0001));
-                    f_regions.push_back(region);
-                }
+                regions = Categorise(intersecting_verts, regions, region);
             }
-            regions.push_back(f_regions);
+            mFaces[f_idx].SetRegions(regions, intersecting_verts);
         }
-
-        // Step 2: Carve up regions
-
-        // Step 4: Discard unneccesary regions
-
-        // Step 3: Set the final regions on faces
-        for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
-        {
-            std::vector<std::vector<Vertex>> sub_regions;
-            for (auto r : regions[f_idx])
-            {
-                std::vector<Vertex> vs;
-                for (auto idx : r.mIndices)
-                    vs.push_back(intersecting_verts[idx]);
-                sub_regions.push_back(vs);
-
-                // !DEBUG
-                printf("%d\n", r.mCategory);
-            }
-            mFaces[f_idx].SetRegions(sub_regions);
-        }
-        printf("\n");
     }
 
     bool Brush::PointInPlanes(glm::vec3 point)
@@ -334,6 +355,11 @@ namespace ForgeCore
     AABB Brush::GetAABB()
     {
         return mBoundingBox;
+    }
+
+    Operation Brush::GetOperation()
+    {
+        return mOperation;
     }
 
     void Brush::SetPlanes(std::vector<Plane> planes)

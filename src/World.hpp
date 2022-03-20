@@ -16,6 +16,7 @@ namespace ForgeCore
         Brush *AddBrush();
         std::vector<Brush *> GetBrushes();
         Brush *GetBrush(int index);
+        int GetTime(Brush *b);
         std::set<Brush *> Update();
         void RebuildBrush(Brush *brush);
 

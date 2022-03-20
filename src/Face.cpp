@@ -1,5 +1,7 @@
 #include "Face.hpp"
 
+#include "Brush.hpp"
+
 namespace ForgeCore
 {
     Face::Face(Plane *plane)
@@ -10,6 +12,11 @@ namespace ForgeCore
     std::vector<Vertex> Face::GetVertices()
     {
         return mVertices;
+    }
+
+    std::vector<Vertex> Face::GetRegionVertices()
+    {
+        return mRegionVertices;
     }
 
     std::vector<unsigned int> Face::GetIndices()
@@ -57,12 +64,13 @@ namespace ForgeCore
         return *mPlane;
     }
 
-    void Face::SetRegions(std::vector<std::vector<Vertex>> regions)
+    void Face::SetRegions(std::vector<Region> regions, std::vector<Vertex> vertices)
     {
         mRegions = regions;
+        mRegionVertices = vertices;
     }
 
-    std::vector<std::vector<Vertex>> Face::GetRegions()
+    std::vector<Region> Face::GetRegions()
     {
         return mRegions;
     }
