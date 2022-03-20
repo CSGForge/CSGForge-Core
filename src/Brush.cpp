@@ -6,6 +6,7 @@
 
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#include <cbop/booleanop.h>
 
 #include "World.hpp"
 
@@ -164,19 +165,63 @@ namespace ForgeCore
         // Operation table used for finding new category
         // Indexed using [rb.operation][ra.category][rb.category]
         static RCategory op_table[2][4][4] = {{{INSIDE, INSIDE, INSIDE, INSIDE},
-                                               {INSIDE, OUTSIDE, INSIDE, ALIGNED},
-                                               {INSIDE, INSIDE, OUTSIDE, REVERSE_ALIGNED},
-                                               {INSIDE, OUTSIDE, OUTSIDE, OUTSIDE}},
+                                               {INSIDE, ALIGNED, INSIDE, ALIGNED},
+                                               {INSIDE, INSIDE, REVERSE_ALIGNED, REVERSE_ALIGNED},
+                                               {INSIDE, ALIGNED, REVERSE_ALIGNED, OUTSIDE}},
                                               {{OUTSIDE, REVERSE_ALIGNED, ALIGNED, INSIDE},
                                                {OUTSIDE, OUTSIDE, ALIGNED, ALIGNED},
                                                {OUTSIDE, REVERSE_ALIGNED, OUTSIDE, REVERSE_ALIGNED},
                                                {OUTSIDE, OUTSIDE, OUTSIDE, OUTSIDE}}};
 
-        auto contour = cbop::Contour();
+        std::vector<Region> new_rs;
+        std::vector<Region> rcs;
+        bool rb_swapped = false;
+        for (auto ra : rs)
+        {
+            cbop::Polygon new_ra;
+            cbop::compute(ra.mPolygon, rb.mPolygon, new_ra, cbop::DIFFERENCE);
 
-        // TODO: Replace with proper categorisation
-        rs.push_back(rb);
-        return rs;
+            cbop::Polygon new_rb;
+            cbop::compute(rb.mPolygon, ra.mPolygon, new_rb, cbop::DIFFERENCE);
+
+            cbop::Polygon new_rc;
+            cbop::compute(ra.mPolygon, rb.mPolygon, new_rc, cbop::INTERSECTION);
+
+            if (new_ra.ncontours() != 0)
+            {
+                ra.mPolygon = new_ra;
+                new_rs.push_back(ra);
+            }
+
+            Region rc;
+            if (new_rc.ncontours() != 0)
+            {
+                rc = rb;
+                rc.mPolygon = new_rc;
+                rc.mCategory = op_table[rc.mBrush->GetOperation()][ra.mCategory][rb.mCategory];
+            }
+
+            if (new_rb.ncontours() == 0)
+            {
+                rb = rc;
+                rb_swapped = true;
+            }
+            else
+                rcs.push_back(rc);
+        }
+
+        // If we've not swapped rb we haven't modified it's category
+        // This means we need to operate against the void
+        // TODO: Allow for different void types (INSIDE = solid, OUTSIDE = air)
+        if (!rb_swapped)
+            rb.mCategory = op_table[rb.mBrush->GetOperation()][OUTSIDE][rb.mCategory];
+
+        // Add all the new regions to the end
+        for (auto rc : rcs)
+            new_rs.push_back(rc);
+        new_rs.push_back(rb);
+
+        return new_rs;
     }
 
     std::vector<Vertex> FindIntersectingVertices(Face f, Brush *b0, Brush *b1)
@@ -305,6 +350,15 @@ namespace ForgeCore
                 auto region = BuildRegion(intersecting_verts, b, face, FindPolygonPath(vs, plane));
                 regions = Categorise(intersecting_verts, regions, region);
             }
+
+            // This only happens if there are no intersections on this face
+            // or all the intersecting brushes are before ourself
+            if (before_self)
+            {
+                auto region = BuildRegion(intersecting_verts, this, face, face.GetVertices());
+                regions = Categorise(intersecting_verts, regions, region);
+            }
+
             mFaces[f_idx].SetRegions(regions, intersecting_verts);
         }
     }
@@ -383,6 +437,11 @@ namespace ForgeCore
     AABB Brush::GetAABB()
     {
         return mBoundingBox;
+    }
+
+    void Brush::SetOperation(Operation operation)
+    {
+        mOperation = operation;
     }
 
     Operation Brush::GetOperation()
