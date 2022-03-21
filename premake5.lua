@@ -5,7 +5,8 @@ project "CSGForge-Core"
 
     includedirs {"include", "libs/glm", "libs/cbop", "libs/CDT/CDT/include"}
     files {
-        "src/**.*"
+        "src/**.*",
+        "include/CSGForge-Core/**.*"
     }
 
     links {"glm", "cbop", "CDT"}
