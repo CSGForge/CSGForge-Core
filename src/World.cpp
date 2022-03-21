@@ -5,8 +5,17 @@ namespace ForgeCore
     Brush *World::AddBrush()
     {
         auto brush = new Brush(this);
+        brush->SetOperation(ADDITION); // ! Hack because if I don't I get a segfault in editor????
         mBrushes.push_back(brush);
         return brush;
+    }
+
+    void World::RemoveBrush(Brush *brush)
+    {
+        for (auto b : brush->GetIntersections())
+            mNeedPartialRebuild.insert(b);
+
+        mBrushes.erase(mBrushes.begin() + GetTime(brush));
     }
 
     std::vector<Brush *> World::GetBrushes()
@@ -19,6 +28,11 @@ namespace ForgeCore
         if (index >= 0 && index < mBrushes.size())
             return mBrushes[index];
         return nullptr;
+    }
+
+    int World::GetBrushCount()
+    {
+        return mBrushes.size();
     }
 
     int World::GetTime(Brush *b)

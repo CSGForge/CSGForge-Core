@@ -21,7 +21,9 @@ namespace ForgeCore
         ~World() = default;
 
         Brush *AddBrush();
+        void RemoveBrush(Brush *brush);
         std::vector<Brush *> GetBrushes();
+        int GetBrushCount();
         Brush *GetBrush(int index);
         int GetTime(Brush *b);
         void SetWorldType(WorldType worldType);
