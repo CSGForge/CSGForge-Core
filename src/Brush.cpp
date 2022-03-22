@@ -44,6 +44,7 @@ namespace ForgeCore
             if (std::abs(v1p.x - v2p.x) <= eps && std::abs(v1p.y - v2p.y) <= eps && std::abs(v1p.z - v2p.z) <= eps)
             {
                 // Adds any faces that aren't already listed on the vertex
+                // TODO: This might not be working?
                 for (auto face : v1.mFaces)
                     if (*std::find(v2.mFaces.begin(), v2.mFaces.end(), face) != face)
                         vs[i].mFaces.push_back(face);
@@ -232,9 +233,12 @@ namespace ForgeCore
 
         // Three types of intersecting vertices exist:
         //  (1) Face bounding vertices that are within the other brush
-        for (auto v : f.GetVertices())
+        auto f_vs = f.GetVertices();
+        for (auto v : f_vs)
             if (b1->PointInPlanes(v.mPosition))
                 PushBackIfUnique(vs, v, 0.0001);
+        if (vs.size() == f_vs.size())
+            return vs;
 
         //  (2) Vertices that are on a face and lie along a face edge of the other brush
         for (int i = 0; i < n - 1; i++)
