@@ -130,9 +130,18 @@ namespace ForgeCore
         for (auto t : cdt.triangles)
         {
             // TODO: Order probably needs reversing on subtractive brushes
-            mIndices.push_back(t.vertices[0]);
-            mIndices.push_back(t.vertices[1]);
-            mIndices.push_back(t.vertices[2]);
+            if (mBrush->GetOperation() == ADDITION)
+            {
+                mIndices.push_back(t.vertices[2]);
+                mIndices.push_back(t.vertices[1]);
+                mIndices.push_back(t.vertices[0]);
+            }
+            else
+            {
+                mIndices.push_back(t.vertices[0]);
+                mIndices.push_back(t.vertices[1]);
+                mIndices.push_back(t.vertices[2]);
+            }
         }
 
         // Translate vertices back to 3d and set them
