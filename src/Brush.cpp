@@ -435,6 +435,7 @@ namespace ForgeCore
     void Brush::SetOperation(Operation operation)
     {
         mOperation = operation;
+        mWorld->RebuildBrush(this);
     }
 
     Operation Brush::GetOperation()
@@ -481,6 +482,7 @@ namespace ForgeCore
 
         mTransformMatrix = tmat;
         mTransform = transform;
+        mWorld->RebuildBrush(this);
     }
 
     Transform Brush::GetTransform()
