@@ -356,9 +356,6 @@ namespace ForgeCore
 
     void Brush::RebuildRegions()
     {
-        // If there's no intersections we can just be quick and painless
-        // TODO: Early insert and return of face regions if no intersections
-
         for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
         {
             std::vector<Region> regions;
