@@ -272,8 +272,8 @@ namespace ForgeCore
         for (auto v : f_vs)
             if (b1->PointInPlanes(v.mPosition))
                 PushBackIfUnique(vs, v, 0.0001);
-        // if (vs.size() == f_vs.size())
-        //     return vs;
+        if (vs.size() == f_vs.size())
+            return vs;
 
         //  (2) Vertices that are on a face and lie along a face edge of the other brush
         for (int i = 0; i < n - 1; i++)
@@ -358,6 +358,8 @@ namespace ForgeCore
     {
         // If there's no intersections we can just be quick and painless
         // TODO: Early insert and return of face regions if no intersections
+        // TODO: Fix region bugs
+        // - Z fighting when
 
         for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
         {
@@ -379,7 +381,7 @@ namespace ForgeCore
 
                 // Find any intersection points between this face and the brush
                 auto vs = FindIntersectingVertices(face, this, b);
-                if (vs.size() == 0) // If there's no intersecting vertices just move on to the next brush
+                if (vs.size() < 3) // Need a full triangle for a region
                     continue;
 
                 // Create a new region
