@@ -358,8 +358,6 @@ namespace ForgeCore
     {
         // If there's no intersections we can just be quick and painless
         // TODO: Early insert and return of face regions if no intersections
-        // TODO: Fix region bugs
-        // - Z fighting when
 
         for (int f_idx = 0; f_idx < mFaces.size(); f_idx++)
         {
@@ -420,29 +418,8 @@ namespace ForgeCore
             if (b == this || !mBoundingBox.Intersects(b->GetAABB()))
                 continue;
 
-            // If any vertices are in the other brushes planes (or vice versa) we have an intersection
-            std::vector<Brush *> bs{this, b};
-            bool intersects = false;
-            for (int i = 0; i < 2; i++)
-            {
-                if (intersects)
-                    continue;
-                for (auto v : bs[i]->GetVertices())
-                {
-                    if (bs[(i + 1) % 2]->PointInPlanes(v.mPosition))
-                    {
-                        intersects = true;
-                        break;
-                    }
-                }
-            }
-
-            // Add an intersection both ways if ones found
-            if (intersects)
-            {
-                AddIntersection(b);
-                b->AddIntersection(this);
-            }
+            AddIntersection(b);
+            b->AddIntersection(this);
         }
 
         return mIntersections;
