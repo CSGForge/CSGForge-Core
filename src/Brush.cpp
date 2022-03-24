@@ -12,28 +12,6 @@
 
 namespace ForgeCore
 {
-    std::vector<glm::vec2> PointsInRegion(std::vector<glm::vec2> r_vs, std::vector<glm::vec2> vs)
-    {
-        // Regions are convex, so we can check if a point is inside it by forming triangles and checking against them
-        std::vector<glm::vec2> vs_in_r;
-        auto v0 = r_vs[0];
-        auto v1 = r_vs[1];
-        for (auto p : vs)
-        {
-            for (int k = 2; k < r_vs.size(); k++)
-            {
-                // See: http://totologic.blogspot.com/2014/01/accurate-point-in-triangle-test.html
-                auto v2 = r_vs[2];
-                float zz = ((v1.y - v2.y) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.y - v2.y));
-                float a = ((v1.y - v2.y) * (p.x - v2.x) + (v2.x - v1.x) * (p.y - v2.y)) / zz;
-                float b = ((v2.y - v0.y) * (p.x - v2.x) + (v0.x - v2.x) * (p.y - v2.y)) / zz;
-                if (0 <= a && a <= 0 && 0 <= b && b <= 1 && a + b <= 1)
-                    vs_in_r.push_back(p);
-            }
-        }
-        return vs_in_r;
-    }
-
     int PushBackIfUnique(std::vector<Vertex> &vs, Vertex v1, float eps)
     {
         auto v1p = v1.mPosition;
@@ -44,7 +22,6 @@ namespace ForgeCore
             if (std::abs(v1p.x - v2p.x) <= eps && std::abs(v1p.y - v2p.y) <= eps && std::abs(v1p.z - v2p.z) <= eps)
             {
                 // Adds any faces that aren't already listed on the vertex
-                // TODO: This might not be working?
                 for (auto face : v1.mFaces)
                     if (*std::find(v2.mFaces.begin(), v2.mFaces.end(), face) != face)
                         vs[i].mFaces.push_back(face);
@@ -56,44 +33,99 @@ namespace ForgeCore
         return vs.size() - 1;
     }
 
-    std::vector<Vertex> FindPolygonPath(std::vector<Vertex> unsorted_vs, Plane plane)
+    float DistFromLine(glm::vec2 a, glm::vec2 b, glm::vec2 c)
     {
-        std::vector<Vertex> sorted_vs;
+        // Z component of cross product of A->B and A-C
+        // See: https://stackoverflow.com/questions/1560492
+        return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+    }
 
-        // Build a path along face edges
-        auto current = unsorted_vs.begin();
-        while (current != unsorted_vs.end())
+    void QuickHull(std::vector<glm::vec2> vs, glm::vec2 a, glm::vec2 b, std::vector<glm::vec2> &out_vs)
+    {
+        // Recursion base case
+        if (vs.size() == 0)
+            return;
+
+        // Find furthest point from segment AB
+        glm::vec2 c;
+        float max_dist = 0;
+        for (auto v : vs)
         {
-            Vertex v1 = *current;
-            sorted_vs.push_back(v1);
-            unsorted_vs.erase(current);
-
-            // Find me an edge!
-            for (int j = 0; j < unsorted_vs.size(); j++)
+            auto dist = DistFromLine(a, b, v);
+            if (dist > max_dist)
             {
-                auto v2 = unsorted_vs[j];
-                int shared_faces = 0;
-                for (auto face : v1.mFaces)
-                    if (*std::find(v2.mFaces.begin(), v2.mFaces.end(), face) == face)
-                        shared_faces++;
-
-                // Edges only exist between two vertices if they share two faces
-                if (shared_faces == 2)
-                {
-                    current = unsorted_vs.begin() + j;
-                    break;
-                }
+                max_dist = dist;
+                c = v;
             }
         }
 
-        // Winding order of the path may be wrong so we need to reverse it
-        glm::vec3 v0 = sorted_vs[0].mPosition;
-        glm::vec3 v1 = sorted_vs[1].mPosition;
-        glm::vec3 v2 = sorted_vs[2].mPosition;
-        if (glm::dot(glm::cross(v1 - v0, v2 - v0), plane.mNormal) < 0)
-            std::reverse(sorted_vs.begin(), sorted_vs.end());
+        // Add C to the hull between A and B
+        for (int i = 0; i < out_vs.size(); i++)
+        {
+            if (out_vs[i] == a)
+            {
+                out_vs.insert(out_vs.begin() + i + 1, c);
+                break;
+            }
+        }
 
-        return sorted_vs;
+        // Find points on left of AC and CB
+        std::vector<glm::vec2> s1, s2;
+        for (auto v : vs)
+        {
+            if (v == a || v == b || v == c)
+                continue;
+
+            if (DistFromLine(a, c, v) > 0.0001)
+                s1.push_back(v);
+            else if (DistFromLine(c, b, v) > 0.0001)
+                s2.push_back(v);
+        }
+
+        // Recurse
+        QuickHull(s1, a, c, out_vs);
+        QuickHull(s2, c, b, out_vs);
+    }
+
+    std::vector<glm::vec2> FindConvexHull(std::vector<glm::vec2> in_vs)
+    {
+        std::vector<glm::vec2> out_vs;
+
+        // Find left and right most point indices
+        int min_x = 0, max_x = 0;
+        for (int i = 1; i < in_vs.size(); i++)
+        {
+            if (in_vs[i].x < in_vs[min_x].x)
+                min_x = i;
+            if (in_vs[i].x > in_vs[max_x].x)
+                max_x = i;
+        }
+
+        // Add a and b to hull
+        auto a = in_vs[min_x];
+        auto b = in_vs[max_x];
+        out_vs.push_back(a);
+        out_vs.push_back(b);
+
+        // Divide in_vs into s1 and s2
+        std::vector<glm::vec2> s1, s2;
+        for (auto v : in_vs)
+        {
+            if (v == a || v == b)
+                continue;
+
+            auto dist = DistFromLine(a, b, v);
+            if (dist > 0.0001)
+                s1.push_back(v);
+            else if (dist < 0.0001)
+                s2.push_back(v);
+        }
+
+        // Recursively add hull points
+        QuickHull(s1, a, b, out_vs);
+        QuickHull(s2, b, a, out_vs);
+
+        return out_vs;
     }
 
     Brush::Brush(World *world)
@@ -156,9 +188,9 @@ namespace ForgeCore
         // TODO: Verify these are correct
         mVertices = brush_vertices;
 
-        // Reorder face vertices
+        // Set face vertices
         for (int i = 0; i < n; i++)
-            mFaces[i].SetVertices(FindPolygonPath(face_vertices[i], mFaces[i].GetPlane()));
+            mFaces[i].SetVertices(face_vertices[i]);
     }
 
     std::vector<Region> Categorise(std::vector<Region> rs, Region rb)
@@ -204,7 +236,10 @@ namespace ForgeCore
                 rb_swapped = true;
             }
             else
+            {
                 rcs.push_back(rc);
+                rb.mPolygon = new_rb;
+            }
         }
 
         // If we've not swapped rb we haven't modified it's category
@@ -237,8 +272,8 @@ namespace ForgeCore
         for (auto v : f_vs)
             if (b1->PointInPlanes(v.mPosition))
                 PushBackIfUnique(vs, v, 0.0001);
-        if (vs.size() == f_vs.size())
-            return vs;
+        // if (vs.size() == f_vs.size())
+        //     return vs;
 
         //  (2) Vertices that are on a face and lie along a face edge of the other brush
         for (int i = 0; i < n - 1; i++)
@@ -303,12 +338,18 @@ namespace ForgeCore
         loc_x /= glm::length(loc_x);
         loc_y /= glm::length(loc_y);
 
-        cbop::Contour contour;
+        std::vector<glm::vec2> lvs;
         for (auto v : rvs)
         {
             auto p = v.mPosition - loc_o;
-            contour.add({glm::dot(p, loc_x), glm::dot(p, loc_y)});
+            lvs.push_back({glm::dot(p, loc_x), glm::dot(p, loc_y)});
         }
+        // TODO: Check the order is correct for plane normal. Might just be fine lol
+        lvs = FindConvexHull(lvs);
+
+        cbop::Contour contour;
+        for (auto v : lvs)
+            contour.add({v.x, v.y});
         r.mPolygon.push_back(contour);
 
         return r;
@@ -343,7 +384,7 @@ namespace ForgeCore
                     continue;
 
                 // Create a new region
-                regions = Categorise(regions, BuildRegion(b, face, FindPolygonPath(vs, plane)));
+                regions = Categorise(regions, BuildRegion(b, face, vs));
             }
 
             // This only happens if there are no intersections on this face
@@ -496,6 +537,7 @@ namespace ForgeCore
 
     void Brush::Triangulate()
     {
+        printf("Triangulating brush:\n");
         for (int i = 0; i < mFaces.size(); i++)
             mFaces[i].Triangulate();
     }

@@ -79,6 +79,25 @@ namespace ForgeCore
         return mRegions;
     }
 
+    unsigned int AddVsAndEs(cbop::Polygon polygon, int c_idx, std::vector<CDT::V2d<double>> &vs, std::vector<CDT::Edge> &es, unsigned int offset)
+    {
+        auto contour = polygon.contour(c_idx);
+
+        // Add vs and es from self
+        for (unsigned int i = 0; i < contour.nvertices(); i++)
+        {
+            auto v = contour.vertex(i);
+            vs.push_back({v.x(), v.y()});
+            es.push_back({offset + i, offset + (i + 1) % contour.nvertices()});
+        }
+        offset += contour.nvertices();
+
+        // Add vs and es from holes recursively
+        for (unsigned int i = 0; i = contour.nholes(); i++)
+            offset = AddVsAndEs(polygon, contour.hole(i), vs, es, offset);
+        return offset;
+    }
+
     void Face::Triangulate()
     {
         mIndices.clear();
@@ -93,9 +112,10 @@ namespace ForgeCore
             if (r.mBrush != mBrush || r.mCategory != target_cat)
                 continue;
 
-            // TODO: This might work with just passing polygon as subj and result
             cbop::compute(polygon, r.mPolygon, new_polygon, cbop::UNION);
+
             polygon = new_polygon;
+            new_polygon.clear();
         }
 
         // Early return if there's nothing left of the face
@@ -106,19 +126,16 @@ namespace ForgeCore
         CDT::Triangulation<double> cdt;
 
         // Get all the vertices/edges
+        // cbop leaves extra contours and stuff on union
+        // Need to just deal with contours that are children
         std::vector<CDT::V2d<double>> vs;
         std::vector<CDT::Edge> es;
         unsigned int offset = 0;
         for (unsigned int i = 0; i < polygon.ncontours(); i++)
         {
-            auto contour = polygon.contour(i);
-            for (unsigned int j = 0; j < contour.nvertices(); j++)
-            {
-                auto v = contour.vertex(j);
-                vs.push_back({v.x(), v.y()});
-                es.push_back({offset + j, offset + (j + 1) % contour.nvertices()});
-            }
-            offset += contour.nvertices();
+            if (!polygon.contour(i).external())
+                continue;
+            offset = AddVsAndEs(polygon, i, vs, es, offset);
         }
 
         // Compute triangulation and update
