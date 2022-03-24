@@ -537,7 +537,6 @@ namespace ForgeCore
 
     void Brush::Triangulate()
     {
-        printf("Triangulating brush:\n");
         for (int i = 0; i < mFaces.size(); i++)
             mFaces[i].Triangulate();
     }
