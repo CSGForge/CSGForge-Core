@@ -93,7 +93,7 @@ namespace ForgeCore
         offset += contour.nvertices();
 
         // Add vs and es from holes recursively
-        for (unsigned int i = 0; i = contour.nholes(); i++)
+        for (unsigned int i = 0; i < contour.nholes(); i++)
             offset = AddVsAndEs(polygon, contour.hole(i), vs, es, offset);
         return offset;
     }
@@ -122,9 +122,6 @@ namespace ForgeCore
         if (polygon.ncontours() == 0)
             return;
 
-        // Use constrained delaunay triangulation to triangulate the polygon
-        CDT::Triangulation<double> cdt;
-
         // Get all the vertices/edges
         // cbop leaves extra contours and stuff on union
         // Need to just deal with contours that are children
@@ -138,15 +135,16 @@ namespace ForgeCore
             offset = AddVsAndEs(polygon, i, vs, es, offset);
         }
 
-        // Compute triangulation and update
+        // Compute triangulation using CDT and update
         CDT::RemoveDuplicatesAndRemapEdges(vs, es);
+        CDT::Triangulation<double> cdt;
         cdt.insertVertices(vs);
         cdt.insertEdges(es);
         cdt.eraseOuterTrianglesAndHoles();
         vs = cdt.vertices; // CDT shuffles vertices so make sure we have the right order
         for (auto t : cdt.triangles)
         {
-            // TODO: Order probably needs reversing on subtractive brushes
+            // Order needs reversing on subtractive brushes
             if (mBrush->GetOperation() == ADDITION)
             {
                 mIndices.push_back(t.vertices[2]);
