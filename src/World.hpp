@@ -20,6 +20,7 @@ namespace ForgeCore
         World() = default;
         ~World() = default;
 
+        bool Modified();
         Brush *AddBrush();
         void RemoveBrush(Brush *brush);
         std::vector<Brush *> GetBrushes();
@@ -36,5 +37,6 @@ namespace ForgeCore
         std::set<Brush *> mNeedFullRebuild;
         std::set<Brush *> mNeedPartialRebuild;
         WorldType mWorldType = AIR_WORLD;
+        bool mModified;
     };
 }

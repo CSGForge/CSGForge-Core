@@ -344,7 +344,6 @@ namespace ForgeCore
             auto p = v.mPosition - loc_o;
             lvs.push_back({glm::dot(p, loc_x), glm::dot(p, loc_y)});
         }
-        // TODO: Check the order is correct for plane normal. Might just be fine lol
         lvs = FindConvexHull(lvs);
 
         cbop::Contour contour;

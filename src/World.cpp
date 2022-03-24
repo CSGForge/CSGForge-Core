@@ -2,11 +2,19 @@
 
 namespace ForgeCore
 {
+    bool World::Modified()
+    {
+        bool was_modified = mModified;
+        mModified = false;
+        return was_modified;
+    }
+
     Brush *World::AddBrush()
     {
         auto brush = new Brush(this);
         brush->SetOperation(ADDITION); // ! Hack because if I don't I get a segfault in editor????
         mBrushes.push_back(brush);
+        mNeedFullRebuild.insert(brush);
         return brush;
     }
 
@@ -14,8 +22,8 @@ namespace ForgeCore
     {
         for (auto b : brush->GetIntersections())
             mNeedPartialRebuild.insert(b);
-
         mBrushes.erase(mBrushes.begin() + GetTime(brush));
+        mModified = true;
     }
 
     std::vector<Brush *> World::GetBrushes()
@@ -45,7 +53,12 @@ namespace ForgeCore
 
     void World::SetWorldType(WorldType worldType)
     {
+        if (mWorldType == worldType)
+            return;
+
         mWorldType = worldType;
+        for (auto b : mBrushes)
+            mNeedPartialRebuild.insert(b);
     }
 
     WorldType World::GetWorldType()
@@ -58,9 +71,13 @@ namespace ForgeCore
         // Full rebuilds occur when a brushes planes have been edited
         for (auto b : mNeedFullRebuild)
         {
+            // Anything we previously intersected with needs a partial rebuild
+            for (auto i : b->GetIntersections())
+                mNeedPartialRebuild.insert(i);
+
+            // Anything we now intersect with needs a partial rebuild
             b->RebuildFaces();
-            auto intersections = b->RebuildIntersections(mBrushes);
-            for (auto i : intersections)
+            for (auto i : b->RebuildIntersections(mBrushes))
                 mNeedPartialRebuild.insert(i);
             mNeedPartialRebuild.insert(b);
         }
@@ -79,6 +96,10 @@ namespace ForgeCore
         std::set<Brush *> updated_brushes = mNeedPartialRebuild;
         mNeedFullRebuild.clear();
         mNeedPartialRebuild.clear();
+
+        if (updated_brushes.size() != 0)
+            mModified = true;
+
         return updated_brushes;
     }
 
