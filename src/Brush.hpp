@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 
 #include <glm/glm.hpp>
 #include <cbop/polygon.h>
@@ -57,7 +58,7 @@ namespace ForgeCore
 
         void RebuildFaces();
         void RebuildRegions();
-        std::vector<Brush *> RebuildIntersections(std::vector<Brush *> brushes);
+        void RebuildIntersections();
         AABB GetAABB();
         World *GetWorld();
         void SetOperation(Operation operation);
@@ -66,7 +67,7 @@ namespace ForgeCore
         std::vector<Plane> GetPlanes();
         std::vector<Face> GetFaces();
         std::vector<Vertex> GetVertices();
-        std::vector<Brush *> GetIntersections();
+        std::set<Brush *> GetIntersections();
         void SetTransform(Transform transform);
         Transform GetTransform();
         bool PointInPlanes(glm::vec3 point);
@@ -81,7 +82,7 @@ namespace ForgeCore
         std::vector<Vertex> mVertices;
         std::vector<Plane> mPlanes;
         std::vector<Face> mFaces;
-        std::vector<Brush *> mIntersections;
+        std::set<Brush *> mIntersections;
         Operation mOperation;
         Transform mTransform;
         glm::mat4 mTransformMatrix;

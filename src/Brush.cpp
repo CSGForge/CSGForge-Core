@@ -401,7 +401,7 @@ namespace ForgeCore
         return true;
     }
 
-    std::vector<Brush *> Brush::RebuildIntersections(std::vector<Brush *> brushes)
+    void Brush::RebuildIntersections()
     {
         // Clear out current intersections both ways
         for (auto b : mIntersections)
@@ -409,7 +409,7 @@ namespace ForgeCore
         mIntersections.clear();
 
         // Recalculate intersections
-        for (auto b : brushes)
+        for (auto b : mWorld->GetBrushes())
         {
             // Can't intersect with ourself or if AABBs don't intersect
             if (b == this || !mBoundingBox.Intersects(b->GetAABB()))
@@ -418,28 +418,17 @@ namespace ForgeCore
             AddIntersection(b);
             b->AddIntersection(this);
         }
-
-        return mIntersections;
     }
 
     void Brush::AddIntersection(Brush *brush)
     {
-        // Add the intersection only if it's not already in the intersection list
-        if (mIntersections.size() == 0 || *std::find(mIntersections.begin(), mIntersections.end(), brush) != brush)
-            mIntersections.push_back(brush);
+        mIntersections.insert(brush);
     }
 
     void Brush::RemoveIntersection(Brush *brush)
     {
-        // Early return assumes brushes are listed once (i.e. mIntersections is a set)
-        for (int i = 0; i < mIntersections.size(); i++)
-        {
-            if (mIntersections[i] == brush)
-            {
-                mIntersections.erase(mIntersections.begin() + i);
-                return;
-            }
-        }
+        // TODO: Check this doesn't die if the brush isn't in the set
+        mIntersections.erase(brush);
     }
 
     AABB Brush::GetAABB()
@@ -486,7 +475,7 @@ namespace ForgeCore
         return mVertices;
     }
 
-    std::vector<Brush *> Brush::GetIntersections()
+    std::set<Brush *> Brush::GetIntersections()
     {
         return mIntersections;
     }

@@ -21,7 +21,10 @@ namespace ForgeCore
     void World::RemoveBrush(Brush *brush)
     {
         for (auto b : brush->GetIntersections())
+        {
             mNeedPartialRebuild.insert(b);
+            b->RemoveIntersection(brush);
+        }
         mBrushes.erase(mBrushes.begin() + GetTime(brush));
         mModified = true;
     }
@@ -77,20 +80,16 @@ namespace ForgeCore
 
             // Anything we now intersect with needs a partial rebuild
             b->RebuildFaces();
-            for (auto i : b->RebuildIntersections(mBrushes))
+            b->RebuildIntersections();
+            for (auto i : b->GetIntersections())
                 mNeedPartialRebuild.insert(i);
             mNeedPartialRebuild.insert(b);
         }
 
         for (auto b : mNeedPartialRebuild)
         {
-            // Avoid recalculating intersections
-            if (!mNeedFullRebuild.contains(b))
-                b->RebuildIntersections(mBrushes);
-
             b->RebuildRegions();
             b->Triangulate();
-            // TODO: Actual 2D boolean polygon operations on faces
         }
 
         std::set<Brush *> updated_brushes = mNeedPartialRebuild;
