@@ -330,9 +330,9 @@ namespace ForgeCore
         // Initially found regions will only have a single, external, contour
         // See: https://stackoverflow.com/questions/26369618/getting-local-2d-coordinates-of-vertices-of-a-planar-polygon-in-3d-space
         auto rf_vs = rf.GetVertices();
-        auto loc_o = un1 * (-rp.mOffset / glm::length(rp.mNormal)); // Point on plane closest to origin
-        auto loc_x = rf_vs[0].mPosition - loc_o;                    // Local X axis
-        auto loc_y = glm::cross(rp.mNormal, loc_x);                 // Local Y axis
+        auto loc_o = rf_vs[0].mPosition;            // Use the first face vertex as origin
+        auto loc_x = rf_vs[1].mPosition - loc_o;    // Local X axis
+        auto loc_y = glm::cross(rp.mNormal, loc_x); // Local Y axis
 
         // Normalise axis
         loc_x /= glm::length(loc_x);

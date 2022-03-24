@@ -162,9 +162,8 @@ namespace ForgeCore
         }
 
         // Translate vertices back to 3d and set them
-        auto un = mPlane->mNormal / glm::length(mPlane->mNormal);
-        auto loc_o = un * (-mPlane->mOffset / glm::length(mPlane->mNormal));
-        auto loc_x = mVertices[0].mPosition - loc_o;
+        auto loc_o = mVertices[0].mPosition;
+        auto loc_x = mVertices[1].mPosition - loc_o;
         auto loc_y = glm::cross(mPlane->mNormal, loc_x);
         loc_x /= glm::length(loc_x);
         loc_y /= glm::length(loc_y);
