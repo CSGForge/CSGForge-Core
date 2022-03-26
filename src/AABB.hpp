@@ -13,6 +13,7 @@ namespace ForgeCore
         ~AABB() = default;
 
         bool Intersects(AABB other);
+        bool Contains(AABB other);
         void Update(std::vector<glm::vec3> vertices);
         glm::vec3 GetMin();
         glm::vec3 GetMax();

@@ -372,7 +372,10 @@ namespace ForgeCore
                     before_self = false;
                 }
 
-                // TODO: Move onto next brush if intersecting before self and AABB is entirely contained
+                // Move onto next brush if intersecting before self and AABB is entirely contained
+                // This brush can have no impact on the result
+                if (before_self && mBoundingBox.Contains(b->GetAABB()))
+                    continue;
 
                 // Find any intersection points between this face and the brush
                 auto vs = FindIntersectingVertices(face, this, b);

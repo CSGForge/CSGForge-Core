@@ -11,6 +11,13 @@ namespace ForgeCore
                 mMin.z <= other.mMax.z && mMax.z >= other.mMin.z);
     }
 
+    bool AABB::Contains(AABB other)
+    {
+        return (mMin.x <= other.mMin.x && mMax.x >= other.mMax.x &&
+                mMin.y <= other.mMin.y && mMax.y >= other.mMax.y &&
+                mMin.z <= other.mMin.z && mMax.z >= other.mMax.z);
+    }
+
     void AABB::Update(std::vector<glm::vec3> vertices)
     {
         // Reset min/max
