@@ -31,6 +31,7 @@ namespace ForgeCore
         WorldType GetWorldType();
         std::set<Brush *> Update();
         void RebuildBrush(Brush *brush);
+        void SetBrushTime(Brush *brush, unsigned int time);
 
     private:
         std::vector<Brush *> mBrushes;

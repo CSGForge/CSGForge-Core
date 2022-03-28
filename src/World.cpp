@@ -106,4 +106,17 @@ namespace ForgeCore
     {
         mNeedFullRebuild.insert(brush);
     }
+
+    void World::SetBrushTime(Brush *brush, unsigned int time)
+    {
+        if (time >= mBrushes.size())
+            return;
+
+        int old_time = GetTime(brush);
+        if (time == old_time)
+            return;
+
+        mBrushes.erase(mBrushes.begin() + old_time);
+        mBrushes.insert(mBrushes.begin() + time, brush);
+    }
 }
