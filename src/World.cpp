@@ -118,5 +118,6 @@ namespace ForgeCore
 
         mBrushes.erase(mBrushes.begin() + old_time);
         mBrushes.insert(mBrushes.begin() + time, brush);
+        RebuildBrush(brush);
     }
 }
