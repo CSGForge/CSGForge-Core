@@ -6,6 +6,8 @@
 
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 #include <cbop/booleanop.h>
 
 #include "World.hpp"
@@ -485,15 +487,14 @@ namespace ForgeCore
 
     void Brush::SetTransform(Transform transform)
     {
-        // TODO: Rotation lol
-        glm::mat4 tmat(1);
-        tmat = glm::translate(tmat, transform.mTranslation);
-        tmat = glm::scale(tmat, transform.mScale);
-        for (int i = 0; i < mPlanes.size(); i++)
-            mPlanes[i].Transform(tmat);
-
-        mTransformMatrix = tmat;
         mTransform = transform;
+        auto rotation = glm::radians(transform.mRotation);
+        mTransformMatrix =
+            glm::translate(glm::mat4(1.0f), transform.mTranslation) *
+            glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z) *
+            glm::scale(glm::mat4(1.0f), transform.mScale);
+        for (int i = 0; i < mPlanes.size(); i++)
+            mPlanes[i].Transform(mTransformMatrix);
         mWorld->RebuildBrush(this);
     }
 
